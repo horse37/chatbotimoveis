@@ -1,0 +1,18 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: /sitemap.xml
+
+# Disallow admin pages
+Disallow: /admin/
+Disallow: /api/
+Disallow: /login/
+
+# Allow important pages
+Allow: /imoveis/
+Allow: /imovel/
+Allow: /contato/
+
+# Crawl delay
+Crawl-delay: 1

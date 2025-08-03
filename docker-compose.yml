@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  # Aplicação Next.js
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=production
+      # Usando a string de conexão para o banco de dados externo
+      - DATABASE_URL=postgresql://postgres:masterkey@50.114.32.196:5432/imobiliaria_db?schema=public
+      # Definindo um valor padrão para JWT_SECRET
+      - JWT_SECRET=chave_jwt_secreta_para_desenvolvimento_local_12345
+      - UPLOAD_DIR=./public/uploads
+      - PORT=4000
+      - HOSTNAME=0.0.0.0
+      # URL base para o EasyPanel (substitua pelo seu domínio configurado no EasyPanel)
+      # IMPORTANTE: Use o domínio real configurado no EasyPanel, sem a porta
+      - NEXT_PUBLIC_BASE_URL=https://imobiliaria.infopowersistemas.com.br
+      # Configuração para API
+      - NEXT_PUBLIC_API_URL=https://imobiliaria.infopowersistemas.com.br/api
+    volumes:
+      - uploads:/app/public/uploads
+    restart: unless-stopped
+    networks:
+      - app-network
+
+# Volume para persistência de uploads
+volumes:
+  uploads:
+    driver: local
+
+# Rede para a aplicação
+networks:
+  app-network:
+    driver: bridge

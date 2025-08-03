@@ -1,0 +1,116 @@
+<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Logo da Imobiliária com fundo transparente -->
+  <defs>
+    <linearGradient id="buildingGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1E40AF;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Prédio principal -->
+  <rect x="20" y="30" width="25" height="50" fill="url(#buildingGradient)" rx="2"/>
+  
+  <!-- Prédio secundário -->
+  <rect x="45" y="20" width="20" height="60" fill="url(#buildingGradient)" rx="2"/>
+  
+  <!-- Prédio terciário -->
+  <rect x="65" y="35" width="15" height="45" fill="url(#buildingGradient)" rx="2"/>
+  
+  <!-- Janelas do prédio principal -->
+  <rect x="23" y="35" width="4" height="4" fill="white" opacity="0.8"/>
+  <rect x="29" y="35" width="4" height="4" fill="white" opacity="0.8"/>
+  <rect x="36" y="35" width="4" height="4" fill="white" opacity="0.8"/>
+  
+  <rect x="23" y="42" width="4" height="4" fill="white" opacity="0.8"/>
+  <rect x="29" y="42" width="4" height="4" fill="white" opacity="0.8"/>
+  <rect x="36" y="42" width="4" height="4" fill="white" opacity="0.8"/>
+  
+  <rect x="23" y="49" width="4" height="4" fill="white" opacity="0.8"/>
+  <rect x="29" y="49" width="4" height="4" fill="white" opacity="0.8"/>
+  <rect x="36" y="49" width="4" height="4" fill="white" opacity="0.8"/>
+  
+  <rect x="23" y="56" width="4" height="4" fill="white" opacity="0.8"/>
+  <rect x="29" y="56" width="4" height="4" fill="white" opacity="0.8"/>
+  <rect x="36" y="56" width="4" height="4" fill="white" opacity="0.8"/>
+  
+  <rect x="23" y="63" width="4" height="4" fill="white" opacity="0.8"/>
+  <rect x="29" y="63" width="4" height="4" fill="white" opacity="0.8"/>
+  <rect x="36" y="63" width="4" height="4" fill="white" opacity="0.8"/>
+  
+  <rect x="23" y="70" width="4" height="4" fill="white" opacity="0.8"/>
+  <rect x="29" y="70" width="4" height="4" fill="white" opacity="0.8"/>
+  <rect x="36" y="70" width="4" height="4" fill="white" opacity="0.8"/>
+  
+  <!-- Janelas do prédio secundário -->
+  <rect x="48" y="25" width="3" height="3" fill="white" opacity="0.8"/>
+  <rect x="53" y="25" width="3" height="3" fill="white" opacity="0.8"/>
+  <rect x="58" y="25" width="3" height="3" fill="white" opacity="0.8"/>
+  
+  <rect x="48" y="31" width="3" height="3" fill="white" opacity="0.8"/>
+  <rect x="53" y="31" width="3" height="3" fill="white" opacity="0.8"/>
+  <rect x="58" y="31" width="3" height="3" fill="white" opacity="0.8"/>
+  
+  <rect x="48" y="37" width="3" height="3" fill="white" opacity="0.8"/>
+  <rect x="53" y="37" width="3" height="3" fill="white" opacity="0.8"/>
+  <rect x="58" y="37" width="3" height="3" fill="white" opacity="0.8"/>
+  
+  <rect x="48" y="43" width="3" height="3" fill="white" opacity="0.8"/>
+  <rect x="53" y="43" width="3" height="3" fill="white" opacity="0.8"/>
+  <rect x="58" y="43" width="3" height="3" fill="white" opacity="0.8"/>
+  
+  <rect x="48" y="49" width="3" height="3" fill="white" opacity="0.8"/>
+  <rect x="53" y="49" width="3" height="3" fill="white" opacity="0.8"/>
+  <rect x="58" y="49" width="3" height="3" fill="white" opacity="0.8"/>
+  
+  <rect x="48" y="55" width="3" height="3" fill="white" opacity="0.8"/>
+  <rect x="53" y="55" width="3" height="3" fill="white" opacity="0.8"/>
+  <rect x="58" y="55" width="3" height="3" fill="white" opacity="0.8"/>
+  
+  <rect x="48" y="61" width="3" height="3" fill="white" opacity="0.8"/>
+  <rect x="53" y="61" width="3" height="3" fill="white" opacity="0.8"/>
+  <rect x="58" y="61" width="3" height="3" fill="white" opacity="0.8"/>
+  
+  <rect x="48" y="67" width="3" height="3" fill="white" opacity="0.8"/>
+  <rect x="53" y="67" width="3" height="3" fill="white" opacity="0.8"/>
+  <rect x="58" y="67" width="3" height="3" fill="white" opacity="0.8"/>
+  
+  <rect x="48" y="73" width="3" height="3" fill="white" opacity="0.8"/>
+  <rect x="53" y="73" width="3" height="3" fill="white" opacity="0.8"/>
+  <rect x="58" y="73" width="3" height="3" fill="white" opacity="0.8"/>
+  
+  <!-- Janelas do prédio terciário -->
+  <rect x="67" y="40" width="2.5" height="2.5" fill="white" opacity="0.8"/>
+  <rect x="71" y="40" width="2.5" height="2.5" fill="white" opacity="0.8"/>
+  <rect x="75" y="40" width="2.5" height="2.5" fill="white" opacity="0.8"/>
+  
+  <rect x="67" y="45" width="2.5" height="2.5" fill="white" opacity="0.8"/>
+  <rect x="71" y="45" width="2.5" height="2.5" fill="white" opacity="0.8"/>
+  <rect x="75" y="45" width="2.5" height="2.5" fill="white" opacity="0.8"/>
+  
+  <rect x="67" y="50" width="2.5" height="2.5" fill="white" opacity="0.8"/>
+  <rect x="71" y="50" width="2.5" height="2.5" fill="white" opacity="0.8"/>
+  <rect x="75" y="50" width="2.5" height="2.5" fill="white" opacity="0.8"/>
+  
+  <rect x="67" y="55" width="2.5" height="2.5" fill="white" opacity="0.8"/>
+  <rect x="71" y="55" width="2.5" height="2.5" fill="white" opacity="0.8"/>
+  <rect x="75" y="55" width="2.5" height="2.5" fill="white" opacity="0.8"/>
+  
+  <rect x="67" y="60" width="2.5" height="2.5" fill="white" opacity="0.8"/>
+  <rect x="71" y="60" width="2.5" height="2.5" fill="white" opacity="0.8"/>
+  <rect x="75" y="60" width="2.5" height="2.5" fill="white" opacity="0.8"/>
+  
+  <rect x="67" y="65" width="2.5" height="2.5" fill="white" opacity="0.8"/>
+  <rect x="71" y="65" width="2.5" height="2.5" fill="white" opacity="0.8"/>
+  <rect x="75" y="65" width="2.5" height="2.5" fill="white" opacity="0.8"/>
+  
+  <rect x="67" y="70" width="2.5" height="2.5" fill="white" opacity="0.8"/>
+  <rect x="71" y="70" width="2.5" height="2.5" fill="white" opacity="0.8"/>
+  <rect x="75" y="70" width="2.5" height="2.5" fill="white" opacity="0.8"/>
+  
+  <rect x="67" y="75" width="2.5" height="2.5" fill="white" opacity="0.8"/>
+  <rect x="71" y="75" width="2.5" height="2.5" fill="white" opacity="0.8"/>
+  <rect x="75" y="75" width="2.5" height="2.5" fill="white" opacity="0.8"/>
+  
+  <!-- Base/chão -->
+  <rect x="15" y="80" width="70" height="3" fill="#374151" rx="1"/>
+</svg>

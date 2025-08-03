@@ -1,0 +1,42 @@
+# Diret�rios e arquivos padr�o para ignorar
+node_modules/
+.next/
+database/
+# public/ - comentado para permitir uploads
+# Excluir apenas arquivos específicos do public se necessário
+# public/*.log
+dist/
+build/
+*.log
+*.tmp
+*.cache
+.DS_Store
+.idea/
+.vscode/
+.svn/
+
+# Arquivos de ambiente
+.env
+.env.local
+.env*.local
+
+# Arquivos grandes (>100MB)
+*.[mM][bB]
+*.zip
+*.tar
+*.gz
+
+# Arquivos de configura��o/gera��o autom�tica
+# next-env.d.ts
+# next.config.js
+# postcss.config.js
+# tailwind.config.ts
+# tsconfig.json
+
+# Arquivos de banco de dados/SQL
+*.sql
+*.sqlite
+
+# Arquivos de documenta��o/notes
+*.md
+todo
