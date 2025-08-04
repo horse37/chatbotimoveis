@@ -13,6 +13,7 @@ const path = require('path');
 // Configurações - usar variáveis de ambiente ou valores padrão
 const STRAPI_URL = process.env.STRAPI_URL || 'https://whatsapp-strapi.xjueib.easypanel.host';
 const STRAPI_API_TOKEN = process.env.STRAPI_API_TOKEN || '';
+const PORT = process.env.PORT || 4005;
 
 // Log das configurações (sem expor token sensível)
 console.log('🔧 Configurações de sincronização:');
