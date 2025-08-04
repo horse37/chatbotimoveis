@@ -11,7 +11,7 @@
     "fix-permissions": "node init-permissions.js",
     "test:strapi": "node test-integration.js",
     "test:strapi-sync": "node test-strapi-sync.js",
-    "sync:all": "node sync-script.js",
+    "sync:all": "node sync-script-standalone.js",
     "version:patch": "npm version patch --no-git-tag-version",
     "version:minor": "npm version minor --no-git-tag-version",
     "version:major": "npm version major --no-git-tag-version",
