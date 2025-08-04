@@ -1,12 +1,55 @@
 'use client'
 
-import { Suspense } from 'react'
+import { Suspense, useState } from 'react'
 import PropertyFilters from '@/components/properties/PropertyFilters'
 import PropertyList from '@/components/properties/PropertyList'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import Header from '@/components/layout/Header'
+import { useAuth } from '@/lib/auth'
 
 const ImoveisPage = () => {
+  const { user } = useAuth()
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [syncResult, setSyncResult] = useState<string | null>(null)
+
+  const handleSync = async () => {
+    setIsSyncing(true)
+    setSyncResult(null)
+    
+    try {
+      // Obter token do localStorage ou cookies
+      const token = localStorage.getItem('authToken') || document.cookie.includes('auth-token=') ? 
+        document.cookie.split('auth-token=')[1]?.split(';')[0] : null
+
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      }
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+
+      const response = await fetch('/api/sync-imoveis', {
+        method: 'POST',
+        headers,
+      })
+      
+      const result = await response.json()
+      
+      if (response.ok) {
+        setSyncResult(`Sincronização concluída: ${result.successCount} imóveis atualizados`)
+        // Recarregar a página após sincronização
+        setTimeout(() => window.location.reload(), 2000)
+      } else {
+        setSyncResult(`Erro na sincronização: ${result.error || 'Erro desconhecido'}`)
+      }
+    } catch (error) {
+      setSyncResult('Erro ao conectar com o servidor')
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
@@ -20,6 +63,32 @@ const ImoveisPage = () => {
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
               Explore nossa seleção completa de imóveis para venda e locação
             </p>
+            
+            {/* Botão de sincronização para admin */}
+            {user?.isAdmin && (
+              <div className="mt-6">
+                <button
+                  onClick={handleSync}
+                  disabled={isSyncing}
+                  className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isSyncing ? (
+                    <>
+                      <LoadingSpinner size="sm" className="mr-2" />
+                      Sincronizando...
+                    </>
+                  ) : (
+                    'Sincronizar Imóveis'
+                  )}
+                </button>
+                
+                {syncResult && (
+                  <div className={`mt-2 text-sm ${syncResult.includes('Erro') ? 'text-red-600' : 'text-green-600'}`}>
+                    {syncResult}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
