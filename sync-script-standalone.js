@@ -64,7 +64,7 @@ async function uploadFileToStrapi(filePath, filename) {
         headers: {
           'Content-Type': `multipart/form-data; boundary=${boundary}`,
           'Content-Length': bodyBuffer.length,
-          'Authorization': `Bearer ${STRAPI_API_TOKEN}`
+         // 'Authorization': `Bearer ${STRAPI_API_TOKEN}`
         }
       };
 
