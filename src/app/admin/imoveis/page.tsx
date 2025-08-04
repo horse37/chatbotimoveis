@@ -8,6 +8,7 @@ import AdminLayout from '@/components/admin/AdminLayout'
 import toast from 'react-hot-toast'
 import { fetchAuthApi } from '@/lib/api'
 import { formatImovelId } from '@/lib/utils'
+import { useAuth } from '@/lib/hooks/useAuth'
 
 interface Imovel {
   id: number
@@ -27,11 +28,14 @@ interface Imovel {
 export default function AdminImoveisPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { user, loading: authLoading } = useAuth()
   const [imoveis, setImoveis] = useState<Imovel[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || '')
   const [tipoFilter, setTipoFilter] = useState('')
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [syncResult, setSyncResult] = useState<string | null>(null)
 
   const fetchImoveis = useCallback(async () => {
     try {
@@ -119,6 +123,49 @@ export default function AdminImoveisPage() {
     }
   }
 
+  const handleSync = async () => {
+    setIsSyncing(true)
+    setSyncResult(null)
+    
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        toast.error('Token de autenticação não encontrado')
+        setIsSyncing(false)
+        return
+      }
+
+      const response = await fetch('/api/sync-imoveis', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+      
+      const result = await response.json()
+      
+      if (response.ok) {
+        toast.success(`Sincronização concluída: ${result.successCount} imóveis atualizados`)
+        setSyncResult(`Sincronização concluída: ${result.successCount} imóveis atualizados`)
+        // Recarregar a lista de imóveis após sincronização
+        setTimeout(() => {
+          fetchImoveis()
+          setSyncResult(null)
+        }, 2000)
+      } else {
+        toast.error(`Erro na sincronização: ${result.error || 'Erro desconhecido'}`)
+        setSyncResult(`Erro: ${result.error || 'Erro desconhecido'}`)
+      }
+    } catch (error) {
+      console.error('Erro ao conectar com o servidor:', error)
+      toast.error('Erro ao conectar com o servidor')
+      setSyncResult('Erro ao conectar com o servidor')
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -135,7 +182,7 @@ export default function AdminImoveisPage() {
     return colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800'
   }
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <AdminLayout>
         <div className="flex items-center justify-center h-64">
@@ -154,14 +201,42 @@ export default function AdminImoveisPage() {
             <h1 className="text-2xl font-bold text-gray-900">Gerenciar Imóveis</h1>
             <p className="text-gray-600">Visualize e gerencie todos os imóveis cadastrados</p>
           </div>
-          <Link
-            href="/admin/imoveis/cadastrar"
-            className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Novo Imóvel</span>
-          </Link>
+          <div className="flex space-x-3">
+            {user?.isAdmin && (
+              <button
+                onClick={handleSync}
+                disabled={isSyncing}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSyncing ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Sincronizando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" />
+                    <span>Sincronizar Strapi</span>
+                  </>
+                )}
+              </button>
+            )}
+            <Link
+              href="/admin/imoveis/cadastrar"
+              className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Novo Imóvel</span>
+            </Link>
+          </div>
         </div>
+
+        {/* Resultado da sincronização */}
+        {syncResult && (
+          <div className={`p-4 rounded-md ${syncResult.includes('Erro') ? 'bg-red-50 text-red-800' : 'bg-green-50 text-green-800'}`}>
+            {syncResult}
+          </div>
+        )}
 
         {/* Filtros */}
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">

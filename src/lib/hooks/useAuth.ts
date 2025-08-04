@@ -17,7 +17,7 @@ export function useAuth() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const token = localStorage.getItem('admin_token') || localStorage.getItem('token')
+        const token = localStorage.getItem('token') || localStorage.getItem('admin_token')
         
         if (!token) {
           setUser(null)
@@ -33,11 +33,13 @@ export function useAuth() {
 
         if (response.ok) {
           const data = await response.json()
+          console.log('Dados do usuário autenticado:', data)
           setUser({
             ...data.user,
             isAdmin: data.user.role === 'admin'
           })
         } else {
+          console.log('Erro na autenticação:', response.status)
           setUser(null)
         }
       } catch (error) {
