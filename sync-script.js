@@ -9,6 +9,7 @@
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
+const FormData = require('form-data');
 require('dotenv').config();
 
 // Carregar variáveis de ambiente
@@ -58,67 +59,39 @@ async function fetchWithHttps(url, options = {}) {
 
 async function uploadFileToStrapi(filePath, filename) {
   try {
+    console.log(`   📤 Enviando arquivo: ${filename}...`);
+    
+    const FormData = require('form-data');
+    
     // Verificar se o arquivo existe localmente
     if (!fs.existsSync(filePath)) {
       console.log(`   ⚠️  Arquivo não encontrado: ${filePath}`);
       return null;
     }
-
-    const fileContent = fs.readFileSync(filePath);
     
-    // Criar boundary para multipart/form-data
-    const boundary = '----formdata-' + Math.random().toString(36);
-    
-    let body = [];
-    
-    // Adicionar parte do arquivo (Strapi v4 usa "files" como nome do campo)
-    body.push(Buffer.from(`--${boundary}\r\n`));
-    body.push(Buffer.from(`Content-Disposition: form-data; name="files"; filename="${filename}"\r\n`));
-    body.push(Buffer.from('Content-Type: application/octet-stream\r\n\r\n'));
-    body.push(fileContent);
-    body.push(Buffer.from(`\r\n--${boundary}--\r\n`));
-    
-    const bodyBuffer = Buffer.concat(body);
-
-    const response = await new Promise((resolve, reject) => {
-      const options = {
-        hostname: 'whatsapp-strapi.xjueib.easypanel.host',
-        port: 443,
-        path: '/api/upload',
-        method: 'POST',
-        headers: {
-          'Content-Type': `multipart/form-data; boundary=${boundary}`,
-          'Content-Length': bodyBuffer.length
-        }
-      };
-
-      const req = https.request(options, (res) => {
-        let data = '';
-        res.on('data', chunk => data += chunk);
-        res.on('end', () => {
-          try {
-            resolve({
-              status: res.statusCode,
-              data: JSON.parse(data)
-            });
-          } catch (e) {
-            resolve({ status: res.statusCode, data: data });
-          }
-        });
-      });
-
-      req.on('error', reject);
-      req.write(bodyBuffer);
-      req.end();
+    // Criar FormData
+    const form = new FormData();
+    form.append('files', fs.createReadStream(filePath), {
+      filename: filename,
+      contentType: 'image/jpeg'
     });
 
+    // fetch está disponível globalmente no Node.js 18+
+    const response = await fetch(`${STRAPI_URL}/api/upload`, {
+      method: 'POST',
+      body: form,
+      headers: form.getHeaders()
+    });
+
+    const data = await response.json();
+
     // Strapi v4 retorna array de arquivos no formato correto
-    if ((response.status === 200 || response.status === 201) && Array.isArray(response.data)) {
-      const uploadedFile = response.data[0];
+    if (response.ok && Array.isArray(data)) {
+      const uploadedFile = data[0];
       console.log(`   ✅ Arquivo enviado: ${filename} (ID: ${uploadedFile.id})`);
       return uploadedFile.id;
     } else {
-      console.log(`   ❌ Erro ao enviar arquivo: ${filename}`, response.data);
+      console.log(`   ❌ Erro ao enviar arquivo: ${filename}`, data);
       return null;
     }
   } catch (error) {
@@ -158,8 +131,9 @@ async function getAllImoveisFromStrapi() {
     });
     
     if (response.status === 200) {
-      console.log(`✅ Encontrados ${response.data?.length || 0} imóveis no Strapi`);
-      return response.data || [];
+      const imoveis = response.data?.data || response.data || [];
+      console.log(`✅ Encontrados ${imoveis.length} imóveis no Strapi`);
+      return imoveis;
     } else {
       console.log('❌ Erro ao buscar imóveis do Strapi:', response.status);
       console.log('📄 Resposta:', response.data);
@@ -225,6 +199,9 @@ async function syncSingleImovel(imovelData) {
       
       if (fileId) {
         uploadedFotos.push(fileId);
+      } else {
+        // Fallback para URL original se upload falhar
+        uploadedFotos.push(foto.startsWith('/') ? `https://coopcorretores.com.br${foto}` : foto);
       }
     }
 
@@ -250,6 +227,9 @@ async function syncSingleImovel(imovelData) {
       
       if (fileId) {
         uploadedVideos.push(fileId);
+      } else {
+        // Fallback para URL original se upload falhar
+        uploadedVideos.push(video.startsWith('/') ? `https://coopcorretores.com.br${video}` : video);
       }
     }
 
@@ -286,12 +266,13 @@ async function syncSingleImovel(imovelData) {
     const existingResponse = await fetchWithHttps(`${STRAPI_URL}/api/imoveis?filters[id_integracao][$eq]=${encodeURIComponent(imovelData.id)}`, {
       method: 'GET',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${STRAPI_TOKEN}`
       }
     });
 
-    const allImoveis = existingResponse.data || [];
-    const existing = allImoveis.filter(imovel => imovel.id_integracao === imovelData.id);
+    const allImoveis = existingResponse.data?.data || existingResponse.data || [];
+    const existing = allImoveis.filter(imovel => imovel.attributes?.id_integracao === imovelData.id || imovel.id_integracao === imovelData.id);
     console.log(`   📊 Encontrados ${existing.length} imóveis com id_integracao=${imovelData.id}`);
 
     if (existing.length > 0) {
