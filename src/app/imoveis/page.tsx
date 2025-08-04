@@ -5,7 +5,7 @@ import PropertyFilters from '@/components/properties/PropertyFilters'
 import PropertyList from '@/components/properties/PropertyList'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import Header from '@/components/layout/Header'
-import { useAuth } from '@/lib/auth'
+import { useAuth } from '@/lib/hooks/useAuth'
 
 const ImoveisPage = () => {
   const { user } = useAuth()
@@ -17,21 +17,21 @@ const ImoveisPage = () => {
     setSyncResult(null)
     
     try {
-      // Obter token do localStorage ou cookies
-      const token = localStorage.getItem('authToken') || document.cookie.includes('auth-token=') ? 
-        document.cookie.split('auth-token=')[1]?.split(';')[0] : null
+      // Obter token do localStorage (mesmo usado no admin)
+      const token = localStorage.getItem('admin_token')
 
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      }
-
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`
+      if (!token) {
+        setSyncResult('Erro: Token de autenticação não encontrado')
+        setIsSyncing(false)
+        return
       }
 
       const response = await fetch('/api/sync-imoveis', {
         method: 'POST',
-        headers,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
       })
       
       const result = await response.json()
@@ -74,7 +74,9 @@ const ImoveisPage = () => {
                 >
                   {isSyncing ? (
                     <>
-                      <LoadingSpinner size="sm" className="mr-2" />
+                      <div className="mr-2">
+                        <LoadingSpinner size="sm" />
+                      </div>
                       Sincronizando...
                     </>
                   ) : (
