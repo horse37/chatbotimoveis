@@ -148,7 +148,18 @@ async function getAllImoveisFromStrapi() {
     });
     
     if (response.status === 200) {
-      const imoveis = response.data?.data || response.data || [];
+      let imoveis = [];
+      const responseData = response.data;
+      
+      if (Array.isArray(responseData?.data)) {
+        imoveis = responseData.data;
+      } else if (Array.isArray(responseData)) {
+        imoveis = responseData;
+      } else if (responseData?.data && typeof responseData.data === 'object') {
+        // Caso seja um único objeto
+        imoveis = [responseData.data];
+      }
+      
       console.log(`✅ Encontrados ${imoveis.length} imóveis no Strapi`);
       return imoveis;
     } else {
@@ -288,8 +299,19 @@ async function syncSingleImovel(imovelData) {
       }
     });
 
-    const allImoveis = existingResponse.data?.data || existingResponse.data || [];
-    const existing = allImoveis.filter(imovel => imovel.attributes?.id_integracao === imovelData.id || imovel.id_integracao === imovelData.id);
+    const responseData = existingResponse.data;
+    let allImoveis = [];
+    
+    if (Array.isArray(responseData?.data)) {
+      allImoveis = responseData.data;
+    } else if (Array.isArray(responseData)) {
+      allImoveis = responseData;
+    } else if (responseData?.data && typeof responseData.data === 'object') {
+      // Caso a resposta seja um objeto único, transformar em array
+      allImoveis = [responseData.data];
+    }
+    
+    const existing = allImoveis.filter(imovel => imovel && (imovel.attributes?.id_integracao === imovelData.id || imovel.id_integracao === imovelData.id));
     console.log(`   📊 Encontrados ${existing.length} imóveis com id_integracao=${imovelData.id}`);
 
     if (existing.length > 0) {
