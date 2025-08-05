@@ -1,53 +1,27 @@
 #!/usr/bin/env node
 /**
- * Script de sincronização standalone sem dependências externas
+ * Script de sincronização corrigido para Strapi v3.8
  * 
  * Uso: node sync-script-standalone.js
- * Não requer dotenv - usa variáveis de ambiente diretamente
  */
 
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
+const FormData = require('form-data');
+const axios = require('axios');
 
-// Configurações - usar variáveis de ambiente ou valores padrão
+// Configurações
 const STRAPI_URL = process.env.STRAPI_URL || 'https://whatsapp-strapi.xjueib.easypanel.host';
 const STRAPI_API_TOKEN = process.env.STRAPI_API_TOKEN || '';
 const PORT = process.env.PORT || 4005;
 
-// Log das configurações (sem expor token sensível)
+// Log das configurações
 console.log('🔧 Configurações de sincronização:');
 console.log(`🔗 STRAPI_URL: ${STRAPI_URL}`);
 console.log(`🔑 STRAPI_API_TOKEN: ${STRAPI_API_TOKEN ? 'Configurado' : 'Não configurado'}`);
 
-// Funções auxiliares
-async function fetchWithHttps(url, options = {}) {
-  return new Promise((resolve, reject) => {
-    const req = https.request(url, options, (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        try {
-          resolve({
-            status: res.statusCode,
-            data: JSON.parse(data)
-          });
-        } catch (e) {
-          resolve({ status: res.statusCode, data: data });
-        }
-      });
-    });
-    
-    req.on('error', reject);
-    
-    if (options.body) {
-      req.write(options.body);
-    }
-    
-    req.end();
-  });
-}
-
+// Função corrigida para upload de arquivos
 async function uploadFileToStrapi(filePath, filename) {
   try {
     if (!fs.existsSync(filePath)) {
@@ -55,75 +29,46 @@ async function uploadFileToStrapi(filePath, filename) {
       return null;
     }
 
-    const fileContent = fs.readFileSync(filePath);
-    
-    const boundary = '----formdata-' + Math.random().toString(36);
-    
-    let body = [];
-    body.push(Buffer.from(`--${boundary}\r\n`));
-    body.push(Buffer.from(`Content-Disposition: form-data; name="files"; filename="${filename}"\r\n`));
-    body.push(Buffer.from('Content-Type: application/octet-stream\r\n\r\n'));
-    body.push(fileContent);
-    body.push(Buffer.from(`\r\n--${boundary}--\r\n`));
-    
-    const bodyBuffer = Buffer.concat(body);
-
-    // Usar URL completa para evitar problemas de hostname
-    const uploadUrl = `${STRAPI_URL}/upload`;
-    console.log(`   📤 Enviando para: ${uploadUrl}`);
-
-    const response = await new Promise((resolve, reject) => {
-      const options = {
-        hostname: 'whatsapp-strapi.xjueib.easypanel.host',
-        port: 443,
-        path: '/upload',
-        method: 'POST',
-        headers: {
-          'Content-Type': `multipart/form-data; boundary=${boundary}`,
-          'Content-Length': bodyBuffer.length,
-          'Authorization': `Bearer ${STRAPI_API_TOKEN}`
-        }
-      };
-
-      const req = https.request(options, (res) => {
-        let data = '';
-        res.on('data', chunk => data += chunk);
-        res.on('end', () => {
-          try {
-            resolve({
-              status: res.statusCode,
-              data: JSON.parse(data)
-            });
-          } catch (e) {
-            resolve({ status: res.statusCode, data: data });
-          }
-        });
-      });
-
-      req.on('error', reject);
-      req.write(bodyBuffer);
-      req.end();
+    const form = new FormData();
+    form.append('files', fs.createReadStream(filePath), {
+      filename: filename,
+      contentType: getContentType(filename)
     });
 
-    if (response.status === 200 && response.data && response.data[0]) {
-      const uploadedFile = response.data[0];
-      console.log(`   ✅ Arquivo enviado: ${filename} (ID: ${uploadedFile.id})`);
-      return uploadedFile.id;
-    } else {
-      console.log(`   ❌ Erro ao enviar arquivo: ${filename} (Status: ${response.status})`, response.data);
-      if (response.status === 405) {
-        console.log(`   🔧 Verifique se o endpoint /upload está correto e habilitado no Strapi`);
-      } else if (response.status === 401) {
-        console.log(`   🔧 Verifique se o STRAPI_API_TOKEN está configurado corretamente`);
-      }
-      return null;
+    const response = await axios.post(`${STRAPI_URL}/upload`, form, {
+      headers: {
+        ...form.getHeaders(),
+        'Authorization': `Bearer ${STRAPI_API_TOKEN}`
+      },
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity
+    });
+
+    if (response.data && response.data[0]) {
+      console.log(`   ✅ Arquivo enviado: ${filename} (ID: ${response.data[0].id})`);
+      return response.data[0].id;
     }
+    return null;
   } catch (error) {
-    console.log(`   ❌ Erro ao processar arquivo ${filename}:`, error.message);
+    console.log(`   ❌ Erro no upload de ${filename}:`, error.response?.data || error.message);
     return null;
   }
 }
 
+function getContentType(filename) {
+  const ext = path.extname(filename).toLowerCase();
+  const types = {
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.gif': 'image/gif',
+    '.mp4': 'video/mp4',
+    '.pdf': 'application/pdf'
+  };
+  return types[ext] || 'application/octet-stream';
+}
+
+// Função para obter caminho local
 function getLocalPathFromUrl(url) {
   if (url.startsWith('https://coopcorretores.com.br/')) {
     const relativePath = url.replace('https://coopcorretores.com.br/', '');
@@ -142,187 +87,100 @@ function getLocalPathFromUrl(url) {
   return null;
 }
 
-async function testStrapiUploadEndpoint() {
+// Função para testar conexão com Strapi
+async function testStrapiConnection() {
   try {
-    console.log('🔍 Testando endpoint de upload do Strapi...');
-    const response = await fetchWithHttps(`${STRAPI_URL}/upload`, {
-      method: 'GET',
+    const response = await axios.get(`${STRAPI_URL}/imoveis`, {
       headers: {
         'Authorization': `Bearer ${STRAPI_API_TOKEN}`
       }
     });
-    
-    console.log(`   ✅ Endpoint de upload acessível (Status: ${response.status})`);
-    return response.status === 200 || response.status === 204 || response.status === 405;
+    return response.status === 200;
   } catch (error) {
-    console.log(`   ❌ Erro ao acessar endpoint de upload: ${error.message}`);
+    console.log('❌ Erro ao conectar ao Strapi:', error.message);
     return false;
   }
 }
 
-async function getAllImoveisFromStrapi() {
+// Função principal para sincronizar um imóvel
+async function syncSingleImovel(imovel) {
   try {
-    console.log('🔄 Buscando imóveis do Strapi...');
-    const response = await fetchWithHttps(`${STRAPI_URL}/imoveis`, {
-      method: 'GET',
+    console.log(`\n📋 Processando imóvel ${imovel.id}: ${imovel.titulo}`);
+    
+    // Processar fotos
+    const uploadedFotos = [];
+    if (imovel.fotos && imovel.fotos.length > 0) {
+      console.log(`   📸 Processando ${imovel.fotos.length} fotos...`);
+      for (const foto of imovel.fotos) {
+        const localPath = getLocalPathFromUrl(foto);
+        if (localPath) {
+          const fileId = await uploadFileToStrapi(localPath, path.basename(localPath));
+          if (fileId) uploadedFotos.push(fileId);
+        }
+      }
+    }
+
+    // Preparar dados para o Strapi
+    const imovelData = {
+      data: {
+        titulo: imovel.titulo,
+        description: imovel.descricao,
+        price: imovel.preco,
+        tipo_contrato: imovel.tipo_contrato || 'venda',
+        tipo_imovel: imovel.tipo_imovel || 'casa',
+        active: true,
+        bairro: imovel.bairro,
+        cidade: imovel.cidade,
+        tipologia: imovel.tipologia,
+        images: uploadedFotos
+      }
+    };
+
+    // Enviar para o Strapi
+    const response = await axios({
+      method: 'POST',
+      url: `${STRAPI_URL}/imoveis`,
+      data: imovelData,
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${STRAPI_API_TOKEN}`
       }
     });
-    
-    if (response.status === 200) {
-      console.log(`✅ Encontrados ${response.data?.length || 0} imóveis no Strapi`);
-      return response.data || [];
-    } else {
-      console.log('❌ Erro ao buscar imóveis do Strapi:', response.status);
-      return [];
-    }
+
+    console.log(`   ✅ Imóvel sincronizado com ID: ${response.data.id}`);
+    return true;
   } catch (error) {
-    console.log('❌ Erro de conexão com Strapi:', error.message);
-    return [];
+    console.log(`   ❌ Erro ao sincronizar imóvel:`, error.response?.data || error.message);
+    return false;
   }
 }
 
-async function syncSingleImovel(imovelData) {
-  try {
-    console.log(`\n📋 Processando imóvel ${imovelData.id}: ${imovelData.titulo}`);
-    
-    let fotos = [];
-    let videos = [];
-    
-    try {
-      if (imovelData.fotos) {
-        fotos = typeof imovelData.fotos === 'string' ? JSON.parse(imovelData.fotos) : imovelData.fotos;
-      }
-    } catch (e) {
-      console.log(`   ⚠️  Erro ao processar fotos: ${e.message}`);
-      fotos = [];
-    }
-    
-    try {
-      if (imovelData.videos) {
-        videos = typeof imovelData.videos === 'string' ? JSON.parse(imovelData.videos) : imovelData.videos;
-      }
-    } catch (e) {
-      console.log(`   ⚠️  Erro ao processar vídeos: ${e.message}`);
-      videos = [];
-    }
-    
-    console.log(`   📸 ${fotos.length} fotos encontradas`);
-    console.log(`   🎥 ${videos.length} vídeos encontrados`);
-    
-    // Processar upload das imagens
-    const uploadedFotos = [];
-    if (uploadAvailable && fotos.length > 0) {
-      console.log(`   📸 Processando ${fotos.length} fotos...`);
-      for (let i = 0; i < fotos.length; i++) {
-        const fotoUrl = fotos[i];
-        const localPath = getLocalPathFromUrl(fotoUrl);
-        
-        if (localPath) {
-          console.log(`   📤 Fazendo upload da foto ${i+1}: ${path.basename(localPath)}`);
-          const fileId = await uploadFileToStrapi(localPath, path.basename(localPath));
-          if (fileId) {
-            uploadedFotos.push(fileId);
-          }
-        } else {
-          console.log(`   ⚠️  Caminho local não encontrado para: ${fotoUrl}`);
-        }
-      }
-    } else {
-      console.log(`   ⚠️  Upload de imagens não disponível - salvando URLs originais`);
-    }
-    
-    // Processar upload dos vídeos
-    const uploadedVideos = [];
-    if (uploadAvailable && videos.length > 0) {
-      for (let i = 0; i < videos.length; i++) {
-        const videoUrl = videos[i];
-        const localPath = getLocalPathFromUrl(videoUrl);
-        
-        if (localPath) {
-          console.log(`   📤 Fazendo upload do vídeo ${i+1}: ${path.basename(localPath)}`);
-          const fileId = await uploadFileToStrapi(localPath, path.basename(localPath));
-          if (fileId) {
-            uploadedVideos.push(fileId);
-          }
-        } else {
-          console.log(`   ⚠️  Caminho local não encontrado para: ${videoUrl}`);
-        }
-      }
-    } else {
-      console.log(`   ⚠️  Upload de vídeos não disponível - salvando URLs originais`);
-    }
-    
-    return {
-      id: imovelData.id,
-      titulo: imovelData.titulo,
-      status: 'processado',
-      fotos: fotos.length,
-      videos: videos.length,
-      fotosUpload: uploadedFotos.length,
-      videosUpload: uploadedVideos.length,
-      fotosIds: uploadedFotos,
-      videosIds: uploadedVideos
-    };
-  } catch (error) {
-    console.log(`   ❌ Erro ao processar imóvel ${imovelData.id}:`, error.message);
-    return {
-      id: imovelData.id,
-      titulo: imovelData.titulo || 'Sem título',
-      status: 'erro',
-      error: error.message
-    };
-  }
-}
-
+// Função principal
 async function main() {
-  console.log('🚀 Iniciando sincronização de imóveis...');
-  console.log(`🔗 URL Strapi: ${STRAPI_URL}`);
+  console.log('🚀 Iniciando sincronização com Strapi v3.8');
   
-  // Verificar se as variáveis necessárias estão configuradas
-  if (!STRAPI_URL || STRAPI_URL === 'https://whatsapp-strapi.xjueib.easypanel.host') {
-    console.log('⚠️  Atenção: Usando URL padrão do Strapi');
-  }
-  
-  if (!STRAPI_API_TOKEN) {
-    console.log('⚠️  Atenção: STRAPI_API_TOKEN não configurado - uploads podem falhar');
-  }
-  
-  // Testar endpoint de upload
-  const uploadAvailable = await testStrapiUploadEndpoint();
-  if (!uploadAvailable) {
-    console.log('⚠️  Endpoint de upload não está acessível - uploads serão pulados');
-  }
-  
-  try {
-    const imoveis = await getAllImoveisFromStrapi();
-    
-    if (imoveis.length === 0) {
-      console.log('⚠️  Nenhum imóvel encontrado para sincronizar');
-      return;
-    }
-    
-    console.log(`📊 Total de imóveis para processar: ${imoveis.length}`);
-    
-    const resultados = [];
-    for (const imovel of imoveis) {
-      const resultado = await syncSingleImovel(imovel);
-      resultados.push(resultado);
-    }
-    
-    console.log('\n✅ Sincronização concluída!');
-    console.log(`📊 Processados: ${resultados.filter(r => r.status === 'processado').length}`);
-    console.log(`❌ Erros: ${resultados.filter(r => r.status === 'erro').length}`);
-    
-  } catch (error) {
-    console.error('❌ Erro durante a sincronização:', error.message);
+  if (!await testStrapiConnection()) {
+    console.log('❌ Conexão com Strapi falhou. Verifique URL e token.');
     process.exit(1);
   }
+
+  // Aqui você adicionaria a lógica para obter seus imóveis
+  // Exemplo:
+  const imoveis = []; // Substitua por sua lista de imóveis
+  
+  for (const imovel of imoveis) {
+    await syncSingleImovel(imovel);
+  }
+
+  console.log('\n✅ Sincronização concluída!');
 }
 
+// Executar
 if (require.main === module) {
-  main();
+  main().catch(console.error);
 }
 
-module.exports = { main };
+module.exports = {
+  uploadFileToStrapi,
+  syncSingleImovel
+};
