@@ -58,7 +58,9 @@ async function uploadFileToStrapi(filePath, filename) {
         'Accept': 'application/json',
         ...form.getHeaders()
       },
-      timeout: 30000
+      timeout: 120000, // 2 minutos para arquivos grandes
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity
     });
 
     // Processar resposta (igual ao upload-sem-token.js)
@@ -76,12 +78,22 @@ async function uploadFileToStrapi(filePath, filename) {
     
     if (error.response) {
       console.log(`   📊 Status: ${error.response.status}`);
-      console.log(`   📄 Erro: ${error.response.data?.error || error.response.data?.message || JSON.stringify(error.response.data)}`);
+      
+      // Log da resposta bruta para debug
+      if (typeof error.response.data === 'string') {
+        console.log(`   📄 Resposta bruta: ${error.response.data.substring(0, 200)}...`);
+      } else {
+        console.log(`   📄 Erro: ${error.response.data?.error || error.response.data?.message || JSON.stringify(error.response.data)}`);
+      }
       
       if (error.response.status === 401 || error.response.status === 403) {
         console.log(`   💡 O upload parece exigir autenticação.`);
       } else if (error.response.status === 413) {
         console.log(`   💡 Arquivo muito grande. Verifique o limite de upload.`);
+      } else if (error.response.status === 404) {
+        console.log(`   💡 Endpoint de upload não encontrado. Verificar URL.`);
+      } else if (error.response.status === 405) {
+        console.log(`   💡 Método não permitido. Verificar endpoint.`);
       }
     } else if (error.code === 'ENOTFOUND') {
       console.log(`   🔍 Domínio não encontrado`);
