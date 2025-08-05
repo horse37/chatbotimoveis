@@ -15,7 +15,7 @@ const { URL } = require('url');
 // Configurações
 const STRAPI_URL = process.env.STRAPI_URL || 'https://whatsapp-strapi.xjueib.easypanel.host';
 const STRAPI_API_TOKEN = process.env.STRAPI_API_TOKEN || '';
-const PORT = process.env.PORT || 4005;
+const PORT = process.env.PORT || 4000;
 
 // Log das configurações
 console.log('🔧 Configurações de sincronização:');
@@ -477,6 +477,8 @@ async function syncSingleImovelCorrigido(imovelData) {
       };
     }
   }
+
+
 
 // Função para enviar/atualizar imóvel no Strapi (versão corrigida)
 async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
