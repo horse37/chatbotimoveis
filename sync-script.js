@@ -270,22 +270,20 @@ async function syncSingleImovel(imovelData) {
     // Construir URL pública do imóvel usando ID local
     const publicUrl = `https://coopcorretores.com.br/imoveis/${imovelData.id}`;
     
-    // Preparar payload no formato Strapi v4
+    // Preparar payload no formato Strapi v4 - versão simplificada
     const payload = {
       data: {
-        title: imovelData.titulo || 'Imóvel sem título',
-        description: imovelData.descricao || '',
+        title: String(imovelData.titulo || 'Imóvel sem título').substring(0, 255),
+        description: String(imovelData.descricao || '').substring(0, 2000),
         price: Number(imovelData.preco) || 0,
-        tipo_contrato: imovelData.finalidade || 'venda',
-        tipo_imovel: imovelData.tipo || 'apartamento',
+        tipo_contrato: String(imovelData.finalidade || 'venda').substring(0, 50),
+        tipo_imovel: String(imovelData.tipo || 'apartamento').substring(0, 50),
         active: Boolean(imovelData.ativo),
-        bairro: imovelData.bairro || '',
-        cidade: imovelData.cidade || '',
-        tipologia: tipologia,
-        url: publicUrl,
-        id_integracao: imovelData.id,
-        images: uploadedFotos.map(id => id), // IDs dos arquivos para relacionamento
-        videos: uploadedVideos.map(id => id) // IDs dos arquivos para relacionamento
+        bairro: String(imovelData.bairro || '').substring(0, 100),
+        cidade: String(imovelData.cidade || '').substring(0, 100),
+        tipologia: String(tipologia).substring(0, 255),
+        url: String(publicUrl).substring(0, 500),
+        id_integracao: String(imovelData.id).substring(0, 100)
       }
     };
 
@@ -322,12 +320,16 @@ async function syncSingleImovel(imovelData) {
       // Manter URL com ID local (não alterar para ID do Strapi)
       payload.url = `https://coopcorretores.com.br/imoveis/${imovelData.id}`;
       
+      console.log(`   📤 Enviando PUT para: ${STRAPI_URL}/api/imoveis/${strapiId}`);
+      console.log(`   📦 Payload:`, JSON.stringify({ data: payload.data }, null, 2));
+      
       const updateResponse = await fetchWithHttps(`${STRAPI_URL}/api/imoveis/${strapiId}`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ data: payload.data })
       });
 
       if (updateResponse.status === 200) {
@@ -341,12 +343,16 @@ async function syncSingleImovel(imovelData) {
     } else {
       // Criar novo
       console.log(`   ➕ Criando imóvel ${imovelData.id} no Strapi...`);
+      console.log(`   📤 Enviando POST para: ${STRAPI_URL}/api/imoveis`);
+      console.log(`   📦 Payload:`, JSON.stringify({ data: payload.data }, null, 2));
+      
       const createResponse = await fetchWithHttps(`${STRAPI_URL}/api/imoveis`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ data: payload.data })
       });
 
       if (createResponse.status === 200 || createResponse.status === 201) {
@@ -354,10 +360,13 @@ async function syncSingleImovel(imovelData) {
         if (newStrapiId) {
           // Não alterar a URL - manter com ID local
           const updatedPayload = { ...payload };
-          await fetchWithHttps(`${STRAPI_URL}/imoveis/${newStrapiId}`, {
+          await fetchWithHttps(`${STRAPI_URL}/api/imoveis/${newStrapiId}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(updatedPayload)
+            headers: { 
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify({ data: updatedPayload.data })
           });
         }
         console.log(`   ✅ Imóvel ${imovelData.id} criado com sucesso`);

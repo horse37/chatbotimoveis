@@ -18,7 +18,7 @@ const PORT = process.env.PORT || 4005;
 // Log das configurações
 console.log('🔧 Configurações de sincronização:');
 console.log(`🔗 STRAPI_URL: ${STRAPI_URL}`);
-console.log(`🔑 STRAPI_API_TOKEN: ${STRAPI_API_TOKEN ? 'Configurado' : 'Não configurado'}`);
+console.log(`🔓 Upload público - token não necessário`);
 
 // Função auxiliar para determinar tipo de conteúdo
 function getContentType(filename) {
@@ -64,7 +64,7 @@ async function uploadFileToStrapi(filePath, filename) {
         headers: {
           'Content-Type': `multipart/form-data; boundary=${boundary}`,
           'Content-Length': bodyBuffer.length,
-         // 'Authorization': `Bearer ${STRAPI_API_TOKEN}`
+         // // Removido autenticação - upload público permitido
         }
       };
 
@@ -128,10 +128,10 @@ async function testStrapiConnection() {
     const options = {
       hostname: url.hostname,
       port: url.port || 443,
-      path: '/imoveis',
+      path: '/',
       method: 'GET',
       headers: {
-     //   'Authorization': `Bearer ${STRAPI_API_TOKEN}`
+        // Removido autenticação - acesso público permitido
       }
     };
 
@@ -237,17 +237,8 @@ async function syncSingleImovel(imovel) {
   }
 }
 
-// Função principal
-async function main() {
-  console.log('🚀 Iniciando sincronização com Strapi v3.8');
-  
-  if (!await testStrapiConnection()) {
-    console.log('❌ Conexão com Strapi falhou. Verifique URL e token.');
-    process.exit(1);
-  }
-
-  // Função para obter todos os imóveis do Strapi
-  async function getAllImoveisFromStrapi() {
+// Função para obter todos os imóveis do Strapi
+async function getAllImoveisFromStrapi() {
     try {
       console.log('🔄 Buscando imóveis do Strapi...');
       const url = new URL(STRAPI_URL);
@@ -291,8 +282,8 @@ async function main() {
     }
   }
 
-  // Função para sincronizar um único imóvel (versão corrigida)
-  async function syncSingleImovelCorrigido(imovelData) {
+// Função para sincronizar um único imóvel (versão corrigida)
+async function syncSingleImovelCorrigido(imovelData) {
     try {
       console.log(`\n📋 Processando imóvel ${imovelData.id || 'sem ID'}: ${imovelData.titulo || 'Sem título'}`);
       
@@ -408,8 +399,8 @@ async function main() {
     }
   }
 
-  // Função para enviar/atualizar imóvel no Strapi (versão corrigida)
-  async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
+// Função para enviar/atualizar imóvel no Strapi (versão corrigida)
+async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
     try {
       console.log(`   📤 Enviando imóvel "${imovelData.titulo}" para o Strapi...`);
       
@@ -423,9 +414,9 @@ async function main() {
           path: `/imoveis?filters[codigo][$eq]=${encodeURIComponent(imovelData.codigo)}`,
           method: 'GET',
           headers: {
-            'Content-Type': 'application/json',
-           // 'Authorization': `Bearer ${STRAPI_API_TOKEN}`
-          }
+        'Content-Type': 'application/json',
+        // Removido autenticação - acesso público permitido
+      }
         };
 
         const checkReq = https.request(checkOptions, (res) => {
@@ -453,10 +444,10 @@ async function main() {
                 path: path,
                 method: method,
                 headers: {
-                  'Content-Type': 'application/json',
-                  'Content-Length': Buffer.byteLength(payload),
-                //  'Authorization': `Bearer ${STRAPI_API_TOKEN}`
-                }
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload),
+        // Removido autenticação - acesso público permitido
+      }
               };
 
               const req = https.request(options, (res) => {
@@ -559,7 +550,15 @@ async function main() {
     ];
   }
 
-  // Função principal corrigida
+// Função principal
+async function main() {
+  console.log('🚀 Iniciando sincronização com Strapi v3.8');
+  
+  if (!await testStrapiConnection()) {
+    console.log('❌ Conexão com Strapi falhou. Verifique URL e token.');
+    process.exit(1);
+  }
+
   console.log('🚀 Iniciando sincronização de imóveis...');
   console.log(`🔗 URL Strapi: ${STRAPI_URL}`);
   
@@ -568,9 +567,7 @@ async function main() {
     console.log('⚠️  Atenção: Usando URL padrão do Strapi');
   }
   
-  if (!STRAPI_API_TOKEN) {
-    console.log('⚠️  Atenção: STRAPI_API_TOKEN não configurado - uploads podem falhar');
-  }
+  // Token não é mais necessário para uploads públicos
   
   // Testar conexão
   const conectado = await testStrapiConnection();
@@ -593,8 +590,13 @@ async function main() {
   
   const resultados = [];
   for (const imovel of imoveis) {
-    const resultado = await syncSingleImovelCorrigido(imovel);
-    resultados.push(resultado);
+    const resultado = await enviarImovelParaStrapiCorrigido(imovel, imovel.id);
+    resultados.push({
+      status: resultado ? 'processado' : 'erro',
+      titulo: imovel.titulo,
+      fotosUpload: imovel.fotos ? imovel.fotos.length : 0,
+      videosUpload: imovel.videos ? imovel.videos.length : 0
+    });
   }
   
   console.log('\n✅ Sincronização concluída!');
@@ -618,7 +620,6 @@ if (require.main === module) {
 
 module.exports = {
   uploadFileToStrapi,
-  syncSingleImovel,
-  syncSingleImovelCorrigido,
+  enviarImovelParaStrapiCorrigido,
   testStrapiConnection
 };
