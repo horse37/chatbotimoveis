@@ -36,20 +36,44 @@ function getContentType(filename) {
   return types[ext] || 'application/octet-stream';
 }
 
-// Função para upload de arquivos usando axios (mesma lógica do upload-sem-token.js)
-async function uploadFileToStrapi(filePath, filename) {
+// Função para upload de arquivos usando axios (aceita URLs diretas)
+async function uploadFileToStrapi(filePathOrUrl, filename) {
   try {
-    if (!fs.existsSync(filePath)) {
-      console.log(`   ❌ Arquivo não encontrado: ${filePath}`);
-      return null;
+    let fileStream;
+    let fileSize;
+    
+    // Verifica se é uma URL ou caminho local
+    if (filePathOrUrl.startsWith('http') || filePathOrUrl.startsWith('/uploads/')) {
+      // É uma URL - faz stream direto do servidor web
+      const fullUrl = filePathOrUrl.startsWith('/') ? 
+        `https://coopcorretores.com.br${filePathOrUrl}` : filePathOrUrl;
+      
+      console.log(`   🌐 Fazendo stream da URL: ${fullUrl}`);
+      const response = await axios({
+        method: 'GET',
+        url: fullUrl,
+        responseType: 'stream',
+        timeout: 60000
+      });
+      
+      fileStream = response.data;
+      fileSize = response.headers['content-length'];
+    } else {
+      // É um caminho local
+      if (!fs.existsSync(filePathOrUrl)) {
+        console.log(`   ❌ Arquivo não encontrado: ${filePathOrUrl}`);
+        return null;
+      }
+      fileStream = fs.createReadStream(filePathOrUrl);
+      const stats = fs.statSync(filePathOrUrl);
+      fileSize = stats.size;
     }
 
-    const stats = fs.statSync(filePath);
-    console.log(`   📁 Preparando upload: ${filename} (${(stats.size / 1024 / 1024).toFixed(2)} MB)`);
+    console.log(`   📁 Preparando upload: ${filename} (${fileSize ? (fileSize / 1024 / 1024).toFixed(2) + ' MB' : 'tamanho desconhecido'})`);
 
-    // Preparar FormData (igual ao upload-sem-token.js)
+    // Preparar FormData
     const form = new FormData();
-    form.append('files', fs.createReadStream(filePath));
+    form.append('files', fileStream, filename);
 
     console.log(`   📤 Enviando ${filename}...`);
 
@@ -63,6 +87,22 @@ async function uploadFileToStrapi(filePath, filename) {
       maxBodyLength: Infinity
     });
 
+    // Log da resposta para debug
+    console.log(`   📊 Status da resposta: ${response.status}`);
+    console.log(`   📊 Content-Type: ${response.headers['content-type']}`);
+    
+    // Verificar se a resposta é JSON
+    if (typeof response.data === 'string') {
+      console.log(`   ⚠️ Resposta é string, não JSON: ${response.data.substring(0, 200)}`);
+      try {
+        const parsedData = JSON.parse(response.data);
+        response.data = parsedData;
+      } catch (parseError) {
+        console.log(`   ❌ Erro ao processar resposta JSON: ${parseError.message}`);
+        return null;
+      }
+    }
+    
     // Processar resposta (igual ao upload-sem-token.js)
     if (response.data && response.data[0]) {
       const file = response.data[0];
@@ -70,6 +110,7 @@ async function uploadFileToStrapi(filePath, filename) {
       return file.id;
     } else {
       console.log(`   ❌ Resposta inválida do servidor`);
+      console.log(`   📄 Dados recebidos: ${JSON.stringify(response.data)}`);
       return null;
     }
 
@@ -78,10 +119,11 @@ async function uploadFileToStrapi(filePath, filename) {
     
     if (error.response) {
       console.log(`   📊 Status: ${error.response.status}`);
+      console.log(`   📊 Headers: ${JSON.stringify(error.response.headers)}`);
       
       // Log da resposta bruta para debug
       if (typeof error.response.data === 'string') {
-        console.log(`   📄 Resposta bruta: ${error.response.data.substring(0, 200)}...`);
+        console.log(`   📄 Resposta bruta (primeiros 500 chars): ${error.response.data.substring(0, 500)}`);
       } else {
         console.log(`   📄 Erro: ${error.response.data?.error || error.response.data?.message || JSON.stringify(error.response.data)}`);
       }
@@ -107,30 +149,26 @@ async function uploadFileToStrapi(filePath, filename) {
   }
 }
 
-// Função para obter caminho local
-function getLocalPathFromUrl(url) {
+// Função para processar URL de arquivo (retorna URL para stream direto)
+function getFilePathFromUrl(url) {
   console.log(`   🔍 Processando URL: ${url}`);
   
+  // Para URLs completas, retorna como está
   if (url.startsWith('https://coopcorretores.com.br/')) {
-    const relativePath = url.replace('https://coopcorretores.com.br/', '');
-    const fullPath = path.join(__dirname, 'public', relativePath);
-    console.log(`   📂 Caminho gerado (domínio): ${fullPath}`);
-    console.log(`   📊 Arquivo existe: ${fs.existsSync(fullPath)}`);
-    return fullPath;
+    console.log(`   🌐 URL completa detectada`);
+    return url;
   }
   
+  // Para caminhos que começam com /, retorna como está (será processado no upload)
   if (url.startsWith('/')) {
-    const cleanUrl = url.startsWith('/') ? url.substring(1) : url;
-    const fullPath = path.join(__dirname, 'public', cleanUrl);
-    console.log(`   📂 Caminho gerado (barra): ${fullPath}`);
-    console.log(`   📊 Arquivo existe: ${fs.existsSync(fullPath)}`);
-    return fullPath;
+    console.log(`   📂 Caminho relativo detectado`);
+    return url;
   }
   
+  // Para nomes de arquivo simples, constrói o caminho completo
   if (!url.startsWith('http')) {
-    const fullPath = path.join(__dirname, 'public', 'uploads', 'imoveis', url);
-    console.log(`   📂 Caminho gerado (relativo): ${fullPath}`);
-    console.log(`   📊 Arquivo existe: ${fs.existsSync(fullPath)}`);
+    const fullPath = `/uploads/imoveis/${url}`;
+    console.log(`   📁 Construindo caminho: ${fullPath}`);
     return fullPath;
   }
   
@@ -194,7 +232,7 @@ async function syncSingleImovel(imovel) {
       for (let i = 0; i < imovel.fotos.length; i++) {
         const foto = imovel.fotos[i];
         console.log(`   📋 Foto ${i+1}: ${foto}`);
-        const localPath = getLocalPathFromUrl(foto);
+        const localPath = getFilePathFromUrl(foto);
         console.log(`   📁 Caminho local: ${localPath}`);
         if (localPath) {
           console.log(`   📤 Iniciando upload da foto ${i+1}: ${path.basename(localPath)}`);
@@ -355,7 +393,7 @@ async function syncSingleImovelCorrigido(imovelData) {
         console.log(`   📸 Processando ${fotos.length} fotos...`);
         for (let i = 0; i < fotos.length; i++) {
           const fotoUrl = fotos[i];
-          const localPath = getLocalPathFromUrl(fotoUrl);
+          const localPath = getFilePathFromUrl(fotoUrl);
           
           if (localPath) {
             console.log(`   📤 Fazendo upload da foto ${i+1}: ${path.basename(localPath)}`);
@@ -376,7 +414,7 @@ async function syncSingleImovelCorrigido(imovelData) {
         for (let i = 0; i < videos.length; i++) {
           const videoUrl = videos[i];
           console.log(`   📋 Vídeo ${i+1}: ${videoUrl}`);
-          const localPath = getLocalPathFromUrl(videoUrl);
+          const localPath = getFilePathFromUrl(videoUrl);
           console.log(`   📁 Caminho local vídeo: ${localPath}`);
           
           if (localPath) {
@@ -452,7 +490,7 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
         for (let i = 0; i < imovelData.fotos.length; i++) {
           const foto = imovelData.fotos[i];
           console.log(`   📋 Foto ${i+1}: ${foto}`);
-          const localPath = getLocalPathFromUrl(foto);
+          const localPath = getFilePathFromUrl(foto);
           console.log(`   📁 Caminho local: ${localPath}`);
           if (localPath) {
             console.log(`   📤 Iniciando upload da foto ${i+1}: ${path.basename(localPath)}`);
@@ -476,7 +514,7 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
         for (let i = 0; i < imovelData.videos.length; i++) {
           const video = imovelData.videos[i];
           console.log(`   📋 Vídeo ${i+1}: ${video}`);
-          const localPath = getLocalPathFromUrl(video);
+          const localPath = getFilePathFromUrl(video);
           console.log(`   📁 Caminho local: ${localPath}`);
           if (localPath) {
             console.log(`   📤 Iniciando upload do vídeo ${i+1}: ${path.basename(localPath)}`);
