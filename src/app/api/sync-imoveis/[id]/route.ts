@@ -27,16 +27,17 @@ export async function POST(
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
     }
 
-    const imovelId = parseInt(id)
-    console.log('ID convertido para inteiro:', imovelId, 'isNaN:', isNaN(imovelId))
-    
-    if (isNaN(imovelId)) {
-      console.log('Erro: ID inválido -', id)
+    // Validar se o ID é um UUID válido
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    if (!uuidRegex.test(id)) {
+      console.log('Erro: ID não é um UUID válido -', id)
       return NextResponse.json({ error: 'ID do imóvel inválido' }, { status: 400 })
     }
 
+    console.log('UUID válido recebido:', id)
+
     // Verificar se o imóvel existe usando a API interna
-    const imovelResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:4000'}/api/admin/imoveis/${imovelId}`, {
+    const imovelResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:4000'}/api/admin/imoveis/${id}`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -48,9 +49,9 @@ export async function POST(
 
     // Executar o script de sincronização para o imóvel específico
     const scriptPath = path.join(process.cwd(), 'sync-script-standalone.js')
-    const command = `node "${scriptPath}" --imovel-id=${imovelId}`
+    const command = `node "${scriptPath}" --imovel-id=${id}`
 
-    console.log(`Executando sincronização individual para imóvel ${imovelId}:`, command)
+    console.log(`Executando sincronização individual para imóvel ${id}:`, command)
 
     const { stdout, stderr } = await execAsync(command, {
       timeout: 60000, // 1 minuto de timeout
@@ -69,7 +70,7 @@ export async function POST(
 
     return NextResponse.json({ 
       success: true, 
-      message: `Imóvel ${imovelId} sincronizado com sucesso`,
+      message: `Imóvel ${id} sincronizado com sucesso`,
       output: stdout
     })
 
