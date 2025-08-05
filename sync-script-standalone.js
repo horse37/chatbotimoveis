@@ -746,8 +746,10 @@ async function getImovelFromAPI(imovelId) {
     console.log(`   - Tipo: ${imovel.tipo}`);
     console.log(`   - Preço: ${imovel.preco}`);
     console.log(`   - Cidade: ${imovel.cidade}`);
-    console.log(`   - Fotos: ${imovel.fotos?.length || 0}`);
-    console.log(`   - Vídeos: ${imovel.videos?.length || 0}`);
+    console.log(`   - Fotos: ${imovel.fotos?.length || 0} (tipo: ${typeof imovel.fotos})`);
+    console.log(`   - Vídeos: ${imovel.videos?.length || 0} (tipo: ${typeof imovel.videos})`);
+    console.log(`   - Fotos raw:`, imovel.fotos);
+    console.log(`   - Vídeos raw:`, imovel.videos);
     
     // Converter para o formato esperado pelo script
     return {
@@ -771,8 +773,8 @@ async function getImovelFromAPI(imovelId) {
       latitude: imovel.latitude,
       longitude: imovel.longitude,
       caracteristicas: imovel.caracteristicas,
-      fotos: imovel.fotos?.map(foto => foto.url) || [],
-      videos: imovel.videos?.map(video => video.url) || [],
+      fotos: Array.isArray(imovel.fotos) ? imovel.fotos.map(foto => typeof foto === 'string' ? foto : foto.url) : (typeof imovel.fotos === 'string' ? JSON.parse(imovel.fotos || '[]') : []),
+      videos: Array.isArray(imovel.videos) ? imovel.videos.map(video => typeof video === 'string' ? video : video.url) : (typeof imovel.videos === 'string' ? JSON.parse(imovel.videos || '[]') : []),
       created_at: imovel.created_at,
       updated_at: imovel.updated_at
     };
