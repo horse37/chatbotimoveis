@@ -76,7 +76,7 @@ async function uploadFileToStrapi(filePath, filename) {
       method: 'POST',
       hostname: url.hostname,
       port: url.port || 443,
-      path: '/api/upload',
+      path: '/upload',
       headers: {
         ...form.getHeaders()
         // Sem autenticação para perfil público
@@ -140,7 +140,7 @@ function getLocalPathFromUrl(url) {
 async function getAllImoveisFromStrapi() {
   try {
     console.log('🔄 Buscando imóveis do Strapi...');
-    const response = await fetchWithHttps(`${STRAPI_URL}/api/imoveis`, {
+    const response = await fetchWithHttps(`${STRAPI_URL}/imoveis`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json'
@@ -289,7 +289,7 @@ async function syncSingleImovel(imovelData) {
 
     // Verificar se já existe no Strapi (modo público)
     console.log(`   🔍 Verificando se imóvel ${imovelData.id} já existe no Strapi...`);
-    const existingResponse = await fetchWithHttps(`${STRAPI_URL}/api/imoveis?filters[id_integracao][$eq]=${encodeURIComponent(imovelData.id)}`, {
+    const existingResponse = await fetchWithHttps(`${STRAPI_URL}/imoveis?filters[id_integracao][$eq]=${encodeURIComponent(imovelData.id)}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json'
@@ -320,10 +320,10 @@ async function syncSingleImovel(imovelData) {
       // Manter URL com ID local (não alterar para ID do Strapi)
       payload.url = `https://coopcorretores.com.br/imoveis/${imovelData.id}`;
       
-      console.log(`   📤 Enviando PUT para: ${STRAPI_URL}/api/imoveis/${strapiId}`);
+      console.log(`   📤 Enviando PUT para: ${STRAPI_URL}/imoveis/${strapiId}`);
       console.log(`   📦 Payload:`, JSON.stringify({ data: payload.data }, null, 2));
       
-      const updateResponse = await fetchWithHttps(`${STRAPI_URL}/api/imoveis/${strapiId}`, {
+      const updateResponse = await fetchWithHttps(`${STRAPI_URL}/imoveis/${strapiId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -343,10 +343,10 @@ async function syncSingleImovel(imovelData) {
     } else {
       // Criar novo
       console.log(`   ➕ Criando imóvel ${imovelData.id} no Strapi...`);
-      console.log(`   📤 Enviando POST para: ${STRAPI_URL}/api/imoveis`);
+      console.log(`   📤 Enviando POST para: ${STRAPI_URL}/imoveis`);
       console.log(`   📦 Payload:`, JSON.stringify({ data: payload.data }, null, 2));
       
-      const createResponse = await fetchWithHttps(`${STRAPI_URL}/api/imoveis`, {
+      const createResponse = await fetchWithHttps(`${STRAPI_URL}/imoveis`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
