@@ -11,6 +11,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
+  console.log('Sincronização individual - ID recebido:', id, 'tipo:', typeof id)
+  
   try {
     // Verificar autenticação
     const authHeader = request.headers.get('authorization')
@@ -26,12 +28,15 @@ export async function POST(
     }
 
     const imovelId = parseInt(id)
+    console.log('ID convertido para inteiro:', imovelId, 'isNaN:', isNaN(imovelId))
+    
     if (isNaN(imovelId)) {
+      console.log('Erro: ID inválido -', id)
       return NextResponse.json({ error: 'ID do imóvel inválido' }, { status: 400 })
     }
 
     // Verificar se o imóvel existe usando a API interna
-    const imovelResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/admin/imoveis/${imovelId}`, {
+    const imovelResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:4000'}/api/admin/imoveis/${imovelId}`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
