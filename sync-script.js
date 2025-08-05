@@ -10,6 +10,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const FormData = require('form-data');
+const { URL } = require('url');
 require('dotenv').config();
 
 // Carregar variáveis de ambiente
@@ -61,39 +62,55 @@ async function uploadFileToStrapi(filePath, filename) {
   try {
     console.log(`   📤 Enviando arquivo: ${filename}...`);
     
-    const FormData = require('form-data');
-    
     // Verificar se o arquivo existe localmente
     if (!fs.existsSync(filePath)) {
       console.log(`   ⚠️  Arquivo não encontrado: ${filePath}`);
       return null;
     }
-    
-    // Criar FormData
+
     const form = new FormData();
-    form.append('files', fs.createReadStream(filePath), {
-      filename: filename,
-      contentType: 'image/jpeg'
-    });
+    form.append('files', fs.createReadStream(filePath), filename);
 
-    // fetch está disponível globalmente no Node.js 18+
-    const response = await fetch(`${STRAPI_URL}/api/upload`, {
+    const url = new URL(STRAPI_URL);
+    const options = {
       method: 'POST',
-      body: form,
-      headers: form.getHeaders()
+      hostname: url.hostname,
+      port: url.port || 443,
+      path: '/api/upload',
+      headers: {
+        ...form.getHeaders()
+        // Sem autenticação para perfil público
+      }
+    };
+
+    return new Promise((resolve, reject) => {
+      const req = https.request(options, (res) => {
+        let data = '';
+        res.on('data', chunk => data += chunk);
+        res.on('end', () => {
+          try {
+            const parsed = JSON.parse(data);
+            if (res.statusCode === 200 && parsed[0]) {
+              console.log(`   ✅ Arquivo enviado: ${filename} (ID: ${parsed[0].id})`);
+              resolve(parsed[0].id);
+            } else {
+              console.log(`   ❌ Erro no upload: ${res.statusCode}`, parsed);
+              resolve(null);
+            }
+          } catch (e) {
+            console.log(`   ❌ Erro ao processar resposta JSON: ${e.message}`);
+            resolve(null);
+          }
+        });
+      });
+
+      req.on('error', (error) => {
+        console.log(`   ❌ Erro de rede ao enviar ${filename}:`, error.message);
+        resolve(null);
+      });
+
+      form.pipe(req);
     });
-
-    const data = await response.json();
-
-    // Strapi v4 retorna array de arquivos no formato correto
-    if (response.ok && Array.isArray(data)) {
-      const uploadedFile = data[0];
-      console.log(`   ✅ Arquivo enviado: ${filename} (ID: ${uploadedFile.id})`);
-      return uploadedFile.id;
-    } else {
-      console.log(`   ❌ Erro ao enviar arquivo: ${filename}`, data);
-      return null;
-    }
   } catch (error) {
     console.log(`   ❌ Erro ao processar arquivo ${filename}:`, error.message);
     return null;
