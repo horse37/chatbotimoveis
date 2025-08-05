@@ -82,7 +82,7 @@ export async function GET(
       if (!Array.isArray(imovel.fotos)) imovel.fotos = []
     }
 
-    return NextResponse.json({ imovel })
+    return NextResponse.json(imovel)
   } catch (error) {
     console.error('Erro ao buscar imóvel:', error)
     return NextResponse.json(

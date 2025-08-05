@@ -549,10 +549,12 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
           path: `/imoveis?filters[codigo][$eq]=${encodeURIComponent(imovelData.codigo)}`,
           method: 'GET',
           headers: {
-        'Content-Type': 'application/json',
-        // Removido autenticação - acesso público permitido
-      }
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${STRAPI_API_TOKEN}`
+          }
         };
+        
+        console.log(`🔍 Verificando se imóvel já existe no Strapi: ${imovelData.codigo}`);
 
         const checkReq = https.request(checkOptions, (res) => {
           let data = '';
@@ -600,17 +602,23 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
               };
 
               const payload = JSON.stringify(imovelParaStrapi);
+              console.log(`📤 Enviando payload para Strapi:`);
+              console.log(JSON.stringify(imovelParaStrapi, null, 2));
+              
               const options = {
                 hostname: url.hostname,
                 port: url.port || 443,
                 path: path,
                 method: method,
                 headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(payload),
-        // Removido autenticação - acesso público permitido
-      }
+                  'Content-Type': 'application/json',
+                  'Content-Length': Buffer.byteLength(payload),
+                  'Authorization': `Bearer ${STRAPI_API_TOKEN}`
+                }
               };
+              
+              console.log(`🔗 Enviando para: ${url.hostname}${path}`);
+              console.log(`🔑 Token: ${STRAPI_API_TOKEN ? 'Configurado' : 'NÃO CONFIGURADO'}`);
 
               const req = https.request(options, (res) => {
                 let responseData = '';
@@ -717,6 +725,7 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
 async function getImovelFromAPI(imovelId) {
   try {
     const API_URL = process.env.NEXTAUTH_URL || 'http://127.0.0.1:4000';
+    console.log(`🔍 Buscando imóvel ID ${imovelId} na API: ${API_URL}/api/admin/imoveis/${imovelId}`);
     const response = await axios.get(`${API_URL}/api/admin/imoveis/${imovelId}`, {
       headers: {
         'Authorization': `Bearer ${process.env.ADMIN_TOKEN || ''}`
@@ -730,6 +739,15 @@ async function getImovelFromAPI(imovelId) {
     }
     
     const imovel = response.data;
+    console.log(`📋 Dados recebidos da API:`);
+    console.log(`   - ID: ${imovel.id}`);
+    console.log(`   - Código: ${imovel.codigo}`);
+    console.log(`   - Título: ${imovel.titulo}`);
+    console.log(`   - Tipo: ${imovel.tipo}`);
+    console.log(`   - Preço: ${imovel.preco}`);
+    console.log(`   - Cidade: ${imovel.cidade}`);
+    console.log(`   - Fotos: ${imovel.fotos?.length || 0}`);
+    console.log(`   - Vídeos: ${imovel.videos?.length || 0}`);
     
     // Converter para o formato esperado pelo script
     return {
