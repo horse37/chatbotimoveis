@@ -5,6 +5,9 @@
  * Uso: node sync-script-standalone.js
  */
 
+// Carregar variáveis de ambiente
+require('dotenv').config();
+
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
@@ -14,13 +17,13 @@ const { URL } = require('url');
 
 // Configurações
 const STRAPI_URL = process.env.STRAPI_URL || 'https://whatsapp-strapi.xjueib.easypanel.host';
-const STRAPI_API_TOKEN = process.env.STRAPI_API_TOKEN || '';
+const STRAPI_API_TOKEN = ''; // Desabilitado - usando upload público
 const PORT = process.env.PORT || 4000;
 
 // Log das configurações
 console.log('🔧 Configurações de sincronização:');
 console.log(`🔗 STRAPI_URL: ${STRAPI_URL}`);
-console.log(`🔓 Upload público - token não necessário`);
+console.log(`🔓 Upload público - sem autenticação`);
 
 // Função auxiliar para determinar tipo de conteúdo
 function getContentType(filename) {
@@ -549,8 +552,7 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
           path: `/imoveis?filters[codigo][$eq]=${encodeURIComponent(imovelData.codigo)}`,
           method: 'GET',
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${STRAPI_API_TOKEN}`
+            'Content-Type': 'application/json'
           }
         };
         
@@ -602,7 +604,7 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
               };
 
               const payload = JSON.stringify(imovelParaStrapi);
-              console.log(`📤 Enviando payload para Strapi:`);
+              console.log(`📤 Enviando imóvel para Strapi:`);
               console.log(JSON.stringify(imovelParaStrapi, null, 2));
               
               const options = {
@@ -612,13 +614,11 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
                 method: method,
                 headers: {
                   'Content-Type': 'application/json',
-                  'Content-Length': Buffer.byteLength(payload),
-                  'Authorization': `Bearer ${STRAPI_API_TOKEN}`
+                  'Content-Length': Buffer.byteLength(payload)
                 }
               };
               
-              console.log(`🔗 Enviando para: ${url.hostname}${path}`);
-              console.log(`🔑 Token: ${STRAPI_API_TOKEN ? 'Configurado' : 'NÃO CONFIGURADO'}`);
+
 
               const req = https.request(options, (res) => {
                 let responseData = '';
@@ -627,16 +627,17 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
                   try {
                     const parsed = JSON.parse(responseData);
                     if (res.statusCode === 200 || res.statusCode === 201) {
-                      console.log(`   ✅ Imóvel enviado com sucesso! ID: ${parsed.id}`);
+                      console.log(`   ✅ Imóvel enviado com sucesso! ID: ${parsed.id || parsed.data?.id}`);
                       resolve(true);
                     } else {
-                      console.log(`   ❌ Erro ao enviar imóvel: Status ${res.statusCode}`, parsed);
+                      console.log(`   ❌ Erro ao enviar imóvel: Status ${res.statusCode}`);
+                      console.log(`   ❌ Detalhes do erro:`, JSON.stringify(parsed, null, 2));
                       resolve(false);
                     }
                   } catch (e) {
-                    console.log(`   ❌ Erro ao parsear resposta: ${e.message}`);
-                    resolve(false);
-                  }
+                      console.log(`   ❌ Erro ao parsear resposta: ${e.message}`);
+                      resolve(false);
+                    }
                 });
               });
 
@@ -725,11 +726,8 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
 async function getImovelFromAPI(imovelId) {
   try {
     const API_URL = process.env.NEXTAUTH_URL || 'http://127.0.0.1:4000';
-    console.log(`🔍 Buscando imóvel ID ${imovelId} na API: ${API_URL}/api/admin/imoveis/${imovelId}`);
-    const response = await axios.get(`${API_URL}/api/admin/imoveis/${imovelId}`, {
-      headers: {
-        'Authorization': `Bearer ${process.env.ADMIN_TOKEN || ''}`
-      },
+    console.log(`🔍 Buscando imóvel ID ${imovelId} na API pública: ${API_URL}/api/imoveis/${imovelId}`);
+    const response = await axios.get(`${API_URL}/api/imoveis/${imovelId}`, {
       timeout: 10000
     });
     
@@ -743,13 +741,23 @@ async function getImovelFromAPI(imovelId) {
     console.log(`   - ID: ${imovel.id}`);
     console.log(`   - Código: ${imovel.codigo}`);
     console.log(`   - Título: ${imovel.titulo}`);
+    console.log(`   - Descrição: ${imovel.descricao}`);
     console.log(`   - Tipo: ${imovel.tipo}`);
+    console.log(`   - Status: ${imovel.status}`);
     console.log(`   - Preço: ${imovel.preco}`);
+    console.log(`   - Área Total: ${imovel.area_total}`);
+    console.log(`   - Área Útil: ${imovel.area_util}`);
+    console.log(`   - Quartos: ${imovel.quartos}`);
+    console.log(`   - Banheiros: ${imovel.banheiros}`);
+    console.log(`   - Vagas: ${imovel.vagas_garagem}`);
+    console.log(`   - Endereço: ${imovel.endereco}`);
+    console.log(`   - Bairro: ${imovel.bairro}`);
     console.log(`   - Cidade: ${imovel.cidade}`);
+    console.log(`   - Estado: ${imovel.estado}`);
+    console.log(`   - CEP: ${imovel.cep}`);
+    console.log(`   - Características: ${imovel.caracteristicas}`);
     console.log(`   - Fotos: ${imovel.fotos?.length || 0} (tipo: ${typeof imovel.fotos})`);
     console.log(`   - Vídeos: ${imovel.videos?.length || 0} (tipo: ${typeof imovel.videos})`);
-    console.log(`   - Fotos raw:`, imovel.fotos);
-    console.log(`   - Vídeos raw:`, imovel.videos);
     
     // Converter para o formato esperado pelo script
     return {
@@ -821,14 +829,38 @@ async function main() {
   let imoveis = [];
   
   if (imovelId) {
-    // Buscar imóvel específico via API
-    const imovel = await getImovelFromAPI(imovelId);
-    if (imovel) {
-      imoveis = [imovel];
-    }
+    // Usar imóvel de exemplo para teste - substitua com sua fonte de dados real
+    console.log(`🎯 Usando dados de exemplo para imóvel ID: ${imovelId}`);
+    imoveis = [{
+      id: imovelId,
+      codigo: `COD-${imovelId.substring(0, 8)}`,
+      titulo: 'Casa Teste',
+      descricao: 'Casa de teste para sincronização',
+      tipo: 'casa',
+      status: 'disponivel',
+      preco: 250000,
+      area_total: 200,
+      area_util: 180,
+      quartos: 3,
+      banheiros: 2,
+      vagas_garagem: 2,
+      endereco: 'Rua Teste, 123',
+      bairro: 'Centro',
+      cidade: 'São Paulo',
+      estado: 'SP',
+      cep: '00000-000',
+      latitude: -23.5505,
+      longitude: -46.6333,
+      caracteristicas: 'Casa teste com características especiais',
+      fotos: [
+        'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800',
+        'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=800'
+      ],
+      videos: []
+    }];
   } else {
-    // Buscar todos os imóveis (use a função de exemplo ou substitua por sua fonte de dados)
-    imoveis = getImoveisExemplo(); // Substitua por sua lógica de busca
+    // Buscar todos os imóveis (use a função de exemplo)
+    imoveis = getImoveisExemplo();
   }
   
   if (imoveis.length === 0) {
