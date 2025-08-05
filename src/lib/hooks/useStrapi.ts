@@ -64,7 +64,7 @@ export const useStrapiList = <T = any>(
         error: error as Error,
       });
     }
-  }, [contentType, JSON.stringify(params), enabled]);
+  }, [contentType, params, enabled]);
 
   useEffect(() => {
     fetchData();
@@ -108,7 +108,7 @@ export const useStrapiItem = <T = any>(
         error: error as Error,
       });
     }
-  }, [contentType, id, JSON.stringify(params), enabled]);
+  }, [contentType, id, params, enabled]);
 
   useEffect(() => {
     fetchData();
@@ -150,7 +150,7 @@ export const useStrapiMultiple = <T extends Record<string, any>>(
     } finally {
       setLoading(false);
     }
-  }, [JSON.stringify(queries), enabled]);
+  }, [queries, enabled]);
 
   useEffect(() => {
     fetchAll();
@@ -264,7 +264,7 @@ export type {
 };
 
 // Exportar hooks individuais
-export default {
+const strapiHooks = {
   useStrapi,
   useStrapiList,
   useStrapiItem,
@@ -272,3 +272,5 @@ export default {
   useStrapiMutation,
   useStrapiMedia,
 };
+
+export default strapiHooks;

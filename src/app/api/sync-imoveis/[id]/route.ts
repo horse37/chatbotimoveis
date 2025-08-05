@@ -6,7 +6,11 @@ import path from 'path'
 
 const execAsync = promisify(exec)
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
   try {
     // Verificar autenticação
     const authHeader = request.headers.get('authorization')
@@ -21,7 +25,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
     }
 
-    const imovelId = parseInt(params.id)
+    const imovelId = parseInt(id)
     if (isNaN(imovelId)) {
       return NextResponse.json({ error: 'ID do imóvel inválido' }, { status: 400 })
     }
