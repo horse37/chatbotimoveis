@@ -484,6 +484,12 @@ async function syncSingleImovelCorrigido(imovelData) {
 async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
     try {
       console.log(`   📤 Enviando imóvel "${imovelData.titulo}" para o Strapi...`);
+      console.log(`   📋 Dados do imóvel:`);
+      console.log(`      - Título: ${imovelData.titulo}`);
+      console.log(`      - Tipo: ${imovelData.tipo}`);
+      console.log(`      - Preço: R$ ${imovelData.preco}`);
+      console.log(`      - Cidade: ${imovelData.cidade}`);
+      console.log(`      - Status: ${imovelData.status}`);
       
       // Processar fotos
       const uploadedFotos = [];
@@ -568,16 +574,27 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
 
               // Preparar dados com uploads
               const imovelParaStrapi = {
-                titulo: imovelData.titulo,
-                description: imovelData.descricao,
-                price: imovelData.preco,
-                tipo_contrato: imovelData.tipo_contrato || 'venda',
-                tipo_imovel: imovelData.tipo_imovel || 'casa',
-                active: true,
-                bairro: imovelData.bairro,
-                cidade: imovelData.cidade,
-                tipologia: imovelData.tipologia,
-                codigo: imovelData.codigo,
+                titulo: imovelData.titulo || 'Sem título',
+                description: imovelData.descricao || 'Sem descrição',
+                price: parseFloat(imovelData.preco) || 0,
+                tipo_contrato: imovelData.finalidade || imovelData.tipo_contrato || 'venda',
+                tipo_imovel: imovelData.tipo || 'casa',
+                active: imovelData.status === 'disponivel',
+                bairro: imovelData.bairro || '',
+                cidade: imovelData.cidade || '',
+                estado: imovelData.estado || '',
+                endereco: imovelData.endereco || '',
+                cep: imovelData.cep || '',
+                area_total: parseFloat(imovelData.area_total) || 0,
+                area_construida: parseFloat(imovelData.area_construida) || 0,
+                quartos: parseInt(imovelData.quartos) || 0,
+                banheiros: parseInt(imovelData.banheiros) || 0,
+                vagas_garagem: parseInt(imovelData.vagas_garagem) || 0,
+                latitude: parseFloat(imovelData.latitude) || null,
+                longitude: parseFloat(imovelData.longitude) || null,
+                caracteristicas: imovelData.caracteristicas || '',
+                tipologia: imovelData.tipologia || '',
+                codigo: imovelData.codigo || imovelData.id,
                 images: uploadedFotos,
                 videos: uploadedVideos
               };

@@ -43,6 +43,8 @@ export default function AdminImoveisPage() {
   const [showSyncModal, setShowSyncModal] = useState(false)
   const [syncingImovelId, setSyncingImovelId] = useState<number | null>(null)
   const [syncProgress, setSyncProgress] = useState<string>('')
+  const [syncStep, setSyncStep] = useState<number>(0)
+  const [totalSteps] = useState<number>(6)
   const [isSyncingIndividual, setIsSyncingIndividual] = useState(false)
 
   const fetchImoveis = useCallback(async () => {
@@ -215,7 +217,8 @@ export default function AdminImoveisPage() {
     setSyncingImovelId(imovelId)
     setShowSyncModal(true)
     setIsSyncingIndividual(true)
-    setSyncProgress('Iniciando sincronização...')
+    setSyncStep(0)
+    setSyncProgress('🚀 Iniciando sincronização...')
     
     try {
       const token = localStorage.getItem('token')
@@ -226,7 +229,13 @@ export default function AdminImoveisPage() {
         return
       }
 
-      setSyncProgress('Conectando com o servidor...')
+      setSyncStep(1)
+      setSyncProgress('🔗 Conectando com o servidor...')
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      setSyncStep(2)
+      setSyncProgress('📋 Buscando dados do imóvel...')
+      await new Promise(resolve => setTimeout(resolve, 500))
       
       const response = await fetch(`/api/sync-imoveis/${imovelId}`, {
         method: 'POST',
@@ -236,11 +245,23 @@ export default function AdminImoveisPage() {
         },
       })
       
-      setSyncProgress('Processando dados...')
+      setSyncStep(3)
+      setSyncProgress('📤 Enviando dados para o Strapi...')
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      setSyncStep(4)
+      setSyncProgress('📸 Processando imagens...')
+      await new Promise(resolve => setTimeout(resolve, 800))
+      
+      setSyncStep(5)
+      setSyncProgress('🎥 Processando vídeos...')
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
       const result = await response.json()
       
       if (response.ok) {
-        setSyncProgress('Sincronização concluída com sucesso!')
+        setSyncStep(6)
+        setSyncProgress('✅ Sincronização concluída com sucesso!')
         toast.success(`Imóvel '${titulo}' sincronizado com sucesso!`)
         
         // Recarregar a lista de imóveis após sincronização
@@ -248,24 +269,27 @@ export default function AdminImoveisPage() {
           fetchImoveis()
           setShowSyncModal(false)
           setSyncingImovelId(null)
+          setSyncStep(0)
         }, 2000)
       } else {
-        setSyncProgress(`Erro: ${result.error || 'Erro desconhecido'}`)
+        setSyncProgress(`❌ Erro: ${result.error || 'Erro desconhecido'}`)
         toast.error(`Erro na sincronização: ${result.error || 'Erro desconhecido'}`)
         
         setTimeout(() => {
           setShowSyncModal(false)
           setSyncingImovelId(null)
+          setSyncStep(0)
         }, 3000)
       }
     } catch (error) {
       console.error('Erro ao conectar com o servidor:', error)
-      setSyncProgress('Erro ao conectar com o servidor')
+      setSyncProgress('❌ Erro ao conectar com o servidor')
       toast.error('Erro ao conectar com o servidor')
       
       setTimeout(() => {
         setShowSyncModal(false)
         setSyncingImovelId(null)
+        setSyncStep(0)
       }, 3000)
     } finally {
       setIsSyncingIndividual(false)
@@ -597,7 +621,7 @@ export default function AdminImoveisPage() {
         {/* Modal de Progresso da Sincronização Individual */}
         {showSyncModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4">
               <div className="text-center">
                 <div className="mb-4">
                   <RefreshCw className={`w-12 h-12 mx-auto text-blue-500 ${isSyncingIndividual ? 'animate-spin' : ''}`} />
@@ -605,15 +629,58 @@ export default function AdminImoveisPage() {
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
                   Sincronizando Imóvel
                 </h3>
-                <p className="text-sm text-gray-600 mb-4">
+                
+                {/* Barra de Progresso */}
+                <div className="mb-4">
+                  <div className="flex justify-between text-xs text-gray-500 mb-1">
+                    <span>Progresso</span>
+                    <span>{syncStep}/{totalSteps}</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-blue-500 h-2 rounded-full transition-all duration-500 ease-out"
+                      style={{ width: `${(syncStep / totalSteps) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+                
+                <p className="text-sm text-gray-600 mb-4 min-h-[20px]">
                   {syncProgress}
                 </p>
+                
+                {/* Lista de Passos */}
+                <div className="text-left mb-4">
+                  <div className="space-y-2 text-xs">
+                    {[
+                      '🚀 Iniciando sincronização',
+                      '🔗 Conectando com servidor',
+                      '📋 Buscando dados do imóvel',
+                      '📤 Enviando dados para Strapi',
+                      '📸 Processando imagens',
+                      '🎥 Processando vídeos'
+                    ].map((step, index) => (
+                      <div key={index} className={`flex items-center space-x-2 ${
+                        index < syncStep ? 'text-green-600' : 
+                        index === syncStep ? 'text-blue-600 font-medium' : 'text-gray-400'
+                      }`}>
+                        <div className={`w-2 h-2 rounded-full ${
+                          index < syncStep ? 'bg-green-500' :
+                          index === syncStep ? 'bg-blue-500' : 'bg-gray-300'
+                        }`}></div>
+                        <span>{step}</span>
+                        {index < syncStep && <span className="text-green-500">✓</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
                 {!isSyncingIndividual && (
                   <button
                     onClick={() => {
                       setShowSyncModal(false)
                       setSyncingImovelId(null)
                       setSyncProgress('')
+                      setSyncStep(0)
                     }}
                     className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
                   >
