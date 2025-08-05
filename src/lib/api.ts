@@ -13,7 +13,7 @@ export const getApiBaseUrl = () => {
   }
   
   // Em ambiente de servidor (SSR)
-  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4005/api';
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 };
 
 /**

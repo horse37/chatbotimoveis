@@ -17,7 +17,7 @@ export function middleware(request: NextRequest) {
     
     // Verificar se estamos usando a porta correta
     const host = request.headers.get('host') || ''
-    const isCorrectPort = host.includes(':4005') || !host.includes(':')
+    const isCorrectPort = host.includes(':4000') || !host.includes(':')
     
     // Se estamos em produção e na rota raiz, garantir que a navegação funcione corretamente
     // e que estamos usando a porta correta

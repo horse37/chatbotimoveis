@@ -696,8 +696,64 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
   }
 
 // Função principal
+// Função para buscar imóvel específico via API
+async function getImovelFromAPI(imovelId) {
+  try {
+    const API_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const response = await axios.get(`${API_URL}/api/admin/imoveis/${imovelId}`, {
+      headers: {
+        'Authorization': `Bearer ${process.env.ADMIN_TOKEN || ''}`
+      },
+      timeout: 10000
+    });
+    
+    if (response.status !== 200) {
+      console.log(`❌ Imóvel com ID ${imovelId} não encontrado`);
+      return null;
+    }
+    
+    const imovel = response.data;
+    
+    // Converter para o formato esperado pelo script
+    return {
+      id: imovel.id,
+      codigo: imovel.codigo,
+      titulo: imovel.titulo,
+      descricao: imovel.descricao,
+      tipo: imovel.tipo,
+      status: imovel.status,
+      preco: imovel.preco,
+      area_total: imovel.area_total,
+      area_util: imovel.area_util,
+      quartos: imovel.quartos,
+      banheiros: imovel.banheiros,
+      vagas_garagem: imovel.vagas_garagem,
+      endereco: imovel.endereco,
+      bairro: imovel.bairro,
+      cidade: imovel.cidade,
+      estado: imovel.estado,
+      cep: imovel.cep,
+      latitude: imovel.latitude,
+      longitude: imovel.longitude,
+      caracteristicas: imovel.caracteristicas,
+      fotos: imovel.fotos?.map(foto => foto.url) || [],
+      videos: imovel.videos?.map(video => video.url) || [],
+      created_at: imovel.created_at,
+      updated_at: imovel.updated_at
+    };
+  } catch (error) {
+    console.error('Erro ao buscar imóvel via API:', error.message);
+    return null;
+  }
+}
+
 async function main() {
   console.log('🚀 Iniciando sincronização com Strapi v3.8');
+  
+  // Verificar se foi passado um ID específico de imóvel
+  const args = process.argv.slice(2);
+  const imovelIdArg = args.find(arg => arg.startsWith('--imovel-id='));
+  const imovelId = imovelIdArg ? imovelIdArg.split('=')[1] : null;
   
   if (!await testStrapiConnection()) {
     console.log('❌ Conexão com Strapi falhou. Verifique URL e token.');
@@ -707,12 +763,14 @@ async function main() {
   console.log('🚀 Iniciando sincronização de imóveis...');
   console.log(`🔗 URL Strapi: ${STRAPI_URL}`);
   
+  if (imovelId) {
+    console.log(`🎯 Sincronizando imóvel específico: ID ${imovelId}`);
+  }
+  
   // Verificar se as variáveis necessárias estão configuradas
   if (!STRAPI_URL || STRAPI_URL === 'https://whatsapp-strapi.xjueib.easypanel.host') {
     console.log('⚠️  Atenção: Usando URL padrão do Strapi');
   }
-  
-  // Token não é mais necessário para uploads públicos
   
   // Testar conexão
   const conectado = await testStrapiConnection();
@@ -723,8 +781,18 @@ async function main() {
   
   console.log('✅ Conexão com Strapi estabelecida!');
   
-  // Buscar imóveis (use a função de exemplo ou substitua por sua fonte de dados)
-  const imoveis = getImoveisExemplo(); // Substitua por sua lógica de busca
+  let imoveis = [];
+  
+  if (imovelId) {
+    // Buscar imóvel específico via API
+    const imovel = await getImovelFromAPI(imovelId);
+    if (imovel) {
+      imoveis = [imovel];
+    }
+  } else {
+    // Buscar todos os imóveis (use a função de exemplo ou substitua por sua fonte de dados)
+    imoveis = getImoveisExemplo(); // Substitua por sua lógica de busca
+  }
   
   if (imoveis.length === 0) {
     console.log('⚠️  Nenhum imóvel encontrado para sincronizar');
@@ -756,6 +824,7 @@ async function main() {
       console.log(`   ${r.titulo}: ${r.fotosUpload} fotos, ${r.videosUpload} vídeos`);
     });
   }
+
 }
 
 // Executar a sincronização

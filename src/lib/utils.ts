@@ -30,5 +30,5 @@ export function getBaseUrl(): string {
   }
   
   // Fallback para localhost
-  return 'http://localhost:4005';
+  return 'http://localhost:4000';
 }

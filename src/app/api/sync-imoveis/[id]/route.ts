@@ -1,0 +1,81 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { verifyToken } from '@/lib/auth'
+import { exec } from 'child_process'
+import { promisify } from 'util'
+import path from 'path'
+
+const execAsync = promisify(exec)
+
+export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    // Verificar autenticação
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Token de acesso requerido' }, { status: 401 })
+    }
+
+    const token = authHeader.substring(7)
+    const decoded = verifyToken(token)
+    
+    if (!decoded || decoded.role !== 'admin') {
+      return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
+    }
+
+    const imovelId = parseInt(params.id)
+    if (isNaN(imovelId)) {
+      return NextResponse.json({ error: 'ID do imóvel inválido' }, { status: 400 })
+    }
+
+    // Verificar se o imóvel existe usando a API interna
+    const imovelResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/admin/imoveis/${imovelId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+
+    if (!imovelResponse.ok) {
+      return NextResponse.json({ error: 'Imóvel não encontrado' }, { status: 404 })
+    }
+
+    // Executar o script de sincronização para o imóvel específico
+    const scriptPath = path.join(process.cwd(), 'sync-script-standalone.js')
+    const command = `node "${scriptPath}" --imovel-id=${imovelId}`
+
+    console.log(`Executando sincronização individual para imóvel ${imovelId}:`, command)
+
+    const { stdout, stderr } = await execAsync(command, {
+      timeout: 60000, // 1 minuto de timeout
+      cwd: process.cwd()
+    })
+
+    if (stderr && !stderr.includes('Warning')) {
+      console.error('Erro na sincronização:', stderr)
+      return NextResponse.json({ 
+        error: 'Erro durante a sincronização', 
+        details: stderr 
+      }, { status: 500 })
+    }
+
+    console.log('Sincronização concluída:', stdout)
+
+    return NextResponse.json({ 
+      success: true, 
+      message: `Imóvel ${imovelId} sincronizado com sucesso`,
+      output: stdout
+    })
+
+  } catch (error: any) {
+    console.error('Erro na sincronização individual:', error)
+    
+    if (error.code === 'TIMEOUT') {
+      return NextResponse.json({ 
+        error: 'Timeout na sincronização - processo demorou mais que o esperado' 
+      }, { status: 408 })
+    }
+
+    return NextResponse.json({ 
+      error: 'Erro interno do servidor', 
+      details: error.message 
+    }, { status: 500 })
+  }
+}

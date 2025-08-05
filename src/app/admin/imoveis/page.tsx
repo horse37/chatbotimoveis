@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Plus, Search, Filter, Edit, Trash2, Eye } from 'lucide-react'
+import { Plus, Search, Filter, Edit, Trash2, Eye, RefreshCw } from 'lucide-react'
 import AdminLayout from '@/components/admin/AdminLayout'
 import toast from 'react-hot-toast'
 import { fetchAuthApi } from '@/lib/api'
@@ -29,6 +29,7 @@ export default function AdminImoveisPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user, loading: authLoading } = useAuth()
+  const isAdmin = user?.role === 'admin'
   const [imoveis, setImoveis] = useState<Imovel[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -36,6 +37,10 @@ export default function AdminImoveisPage() {
   const [tipoFilter, setTipoFilter] = useState('')
   const [isSyncing, setIsSyncing] = useState(false)
   const [syncResult, setSyncResult] = useState<string | null>(null)
+  const [showSyncModal, setShowSyncModal] = useState(false)
+  const [syncingImovelId, setSyncingImovelId] = useState<number | null>(null)
+  const [syncProgress, setSyncProgress] = useState<string>('')
+  const [isSyncingIndividual, setIsSyncingIndividual] = useState(false)
 
   const fetchImoveis = useCallback(async () => {
     try {
@@ -163,6 +168,94 @@ export default function AdminImoveisPage() {
       setSyncResult('Erro ao conectar com o servidor')
     } finally {
       setIsSyncing(false)
+    }
+  }
+
+  const handleSyncIndividual = (imovelId: number, titulo: string) => {
+    // Confirmação de sincronização com toast
+    toast((t) => (
+      <div className="p-2">
+        <p className="font-medium mb-2">Confirmar sincronização</p>
+        <p className="text-sm mb-4">Deseja sincronizar o imóvel '{titulo}' com o Strapi?</p>
+        <div className="flex space-x-2">
+          <button
+            className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-sm"
+            onClick={() => {
+              toast.dismiss(t.id)
+              confirmSyncIndividual(imovelId, titulo)
+            }}
+          >
+            Sincronizar
+          </button>
+          <button
+            className="bg-gray-200 px-3 py-1 rounded hover:bg-gray-300 text-sm"
+            onClick={() => toast.dismiss(t.id)}
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    ), { duration: 10000 })
+  }
+
+  const confirmSyncIndividual = async (imovelId: number, titulo: string) => {
+    setSyncingImovelId(imovelId)
+    setShowSyncModal(true)
+    setIsSyncingIndividual(true)
+    setSyncProgress('Iniciando sincronização...')
+    
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        toast.error('Token de autenticação não encontrado')
+        setShowSyncModal(false)
+        setIsSyncingIndividual(false)
+        return
+      }
+
+      setSyncProgress('Conectando com o servidor...')
+      
+      const response = await fetch(`/api/sync-imoveis/${imovelId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+      
+      setSyncProgress('Processando dados...')
+      const result = await response.json()
+      
+      if (response.ok) {
+        setSyncProgress('Sincronização concluída com sucesso!')
+        toast.success(`Imóvel '${titulo}' sincronizado com sucesso!`)
+        
+        // Recarregar a lista de imóveis após sincronização
+        setTimeout(() => {
+          fetchImoveis()
+          setShowSyncModal(false)
+          setSyncingImovelId(null)
+        }, 2000)
+      } else {
+        setSyncProgress(`Erro: ${result.error || 'Erro desconhecido'}`)
+        toast.error(`Erro na sincronização: ${result.error || 'Erro desconhecido'}`)
+        
+        setTimeout(() => {
+          setShowSyncModal(false)
+          setSyncingImovelId(null)
+        }, 3000)
+      }
+    } catch (error) {
+      console.error('Erro ao conectar com o servidor:', error)
+      setSyncProgress('Erro ao conectar com o servidor')
+      toast.error('Erro ao conectar com o servidor')
+      
+      setTimeout(() => {
+        setShowSyncModal(false)
+        setSyncingImovelId(null)
+      }, 3000)
+    } finally {
+      setIsSyncingIndividual(false)
     }
   }
 
@@ -387,6 +480,16 @@ export default function AdminImoveisPage() {
                           >
                             <Edit className="w-4 h-4" />
                           </button>
+                          {isAdmin && (
+                            <button
+                              onClick={() => handleSyncIndividual(imovel.id, imovel.titulo)}
+                              className="text-green-600 hover:text-green-900"
+                              title="Sincronizar com Strapi"
+                              disabled={isSyncingIndividual && syncingImovelId === imovel.id}
+                            >
+                              <RefreshCw className={`w-4 h-4 ${isSyncingIndividual && syncingImovelId === imovel.id ? 'animate-spin' : ''}`} />
+                            </button>
+                          )}
                           <button
                             onClick={() => handleDelete(imovel.id, imovel.titulo)}
                             className="text-red-600 hover:text-red-900"
@@ -403,6 +506,37 @@ export default function AdminImoveisPage() {
             </div>
           )}
         </div>
+
+        {/* Modal de Progresso da Sincronização Individual */}
+        {showSyncModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <div className="text-center">
+                <div className="mb-4">
+                  <RefreshCw className={`w-12 h-12 mx-auto text-blue-500 ${isSyncingIndividual ? 'animate-spin' : ''}`} />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Sincronizando Imóvel
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  {syncProgress}
+                </p>
+                {!isSyncingIndividual && (
+                  <button
+                    onClick={() => {
+                      setShowSyncModal(false)
+                      setSyncingImovelId(null)
+                      setSyncProgress('')
+                    }}
+                    className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                  >
+                    Fechar
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AdminLayout>
   )
