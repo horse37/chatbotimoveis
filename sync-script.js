@@ -84,7 +84,7 @@ async function uploadFileToStrapi(filePath, filename) {
       const options = {
         hostname: 'whatsapp-strapi.xjueib.easypanel.host',
         port: 443,
-        path: '/api/upload'
+        path: '/api/upload',
         method: 'POST',
         headers: {
           'Content-Type': `multipart/form-data; boundary=${boundary}`,
