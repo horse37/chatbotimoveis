@@ -131,7 +131,7 @@ async function testStrapiConnection() {
       path: '/imoveis',
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${STRAPI_API_TOKEN}`
+     //   'Authorization': `Bearer ${STRAPI_API_TOKEN}`
       }
     };
 
@@ -203,7 +203,7 @@ async function syncSingleImovel(imovel) {
         headers: {
           'Content-Type': 'application/json',
           'Content-Length': Buffer.byteLength(data),
-          'Authorization': `Bearer ${STRAPI_API_TOKEN}`
+         // 'Authorization': `Bearer ${STRAPI_API_TOKEN}`
         }
       };
 
@@ -424,7 +424,7 @@ async function main() {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${STRAPI_API_TOKEN}`
+           // 'Authorization': `Bearer ${STRAPI_API_TOKEN}`
           }
         };
 
@@ -455,7 +455,7 @@ async function main() {
                 headers: {
                   'Content-Type': 'application/json',
                   'Content-Length': Buffer.byteLength(payload),
-                  'Authorization': `Bearer ${STRAPI_API_TOKEN}`
+                //  'Authorization': `Bearer ${STRAPI_API_TOKEN}`
                 }
               };
 
