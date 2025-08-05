@@ -97,20 +97,32 @@ async function uploadFileToStrapi(filePath, filename) {
 
 // Função para obter caminho local
 function getLocalPathFromUrl(url) {
+  console.log(`   🔍 Processando URL: ${url}`);
+  
   if (url.startsWith('https://coopcorretores.com.br/')) {
     const relativePath = url.replace('https://coopcorretores.com.br/', '');
-    return path.join(__dirname, 'public', relativePath);
+    const fullPath = path.join(__dirname, 'public', relativePath);
+    console.log(`   📂 Caminho gerado (domínio): ${fullPath}`);
+    console.log(`   📊 Arquivo existe: ${fs.existsSync(fullPath)}`);
+    return fullPath;
   }
   
   if (url.startsWith('/')) {
     const cleanUrl = url.startsWith('/') ? url.substring(1) : url;
-    return path.join(__dirname, 'public', cleanUrl);
+    const fullPath = path.join(__dirname, 'public', cleanUrl);
+    console.log(`   📂 Caminho gerado (barra): ${fullPath}`);
+    console.log(`   📊 Arquivo existe: ${fs.existsSync(fullPath)}`);
+    return fullPath;
   }
   
   if (!url.startsWith('http')) {
-    return path.join(__dirname, 'public', 'uploads', 'imoveis', url);
+    const fullPath = path.join(__dirname, 'public', 'uploads', 'imoveis', url);
+    console.log(`   📂 Caminho gerado (relativo): ${fullPath}`);
+    console.log(`   📊 Arquivo existe: ${fs.existsSync(fullPath)}`);
+    return fullPath;
   }
   
+  console.log(`   ⚠️  URL não reconhecida: ${url}`);
   return null;
 }
 
@@ -154,16 +166,35 @@ async function testStrapiConnection() {
 async function syncSingleImovel(imovel) {
   try {
     console.log(`\n📋 Processando imóvel ${imovel.id}: ${imovel.titulo}`);
+    console.log(`   📊 Total de fotos: ${imovel.fotos?.length || 0}`);
+    console.log(`   📊 Total de vídeos: ${imovel.videos?.length || 0}`);
+    if (imovel.fotos && imovel.fotos.length > 0) {
+      console.log(`   📸 URLs das fotos:`, imovel.fotos);
+    }
+    if (imovel.videos && imovel.videos.length > 0) {
+      console.log(`   🎥 URLs dos vídeos:`, imovel.videos);
+    }
     
     // Processar fotos
     const uploadedFotos = [];
     if (imovel.fotos && imovel.fotos.length > 0) {
       console.log(`   📸 Processando ${imovel.fotos.length} fotos...`);
-      for (const foto of imovel.fotos) {
+      for (let i = 0; i < imovel.fotos.length; i++) {
+        const foto = imovel.fotos[i];
+        console.log(`   📋 Foto ${i+1}: ${foto}`);
         const localPath = getLocalPathFromUrl(foto);
+        console.log(`   📁 Caminho local: ${localPath}`);
         if (localPath) {
+          console.log(`   📤 Iniciando upload da foto ${i+1}: ${path.basename(localPath)}`);
           const fileId = await uploadFileToStrapi(localPath, path.basename(localPath));
-          if (fileId) uploadedFotos.push(fileId);
+          if (fileId) {
+            uploadedFotos.push(fileId);
+            console.log(`   ✅ Foto ${i+1} enviada com sucesso (ID: ${fileId})`);
+          } else {
+            console.log(`   ❌ Falha no upload da foto ${i+1}`);
+          }
+        } else {
+          console.log(`   ⚠️  Caminho local não encontrado para: ${foto}`);
         }
       }
     }
@@ -332,16 +363,21 @@ async function syncSingleImovelCorrigido(imovelData) {
         console.log(`   🎥 Processando ${videos.length} vídeos...`);
         for (let i = 0; i < videos.length; i++) {
           const videoUrl = videos[i];
+          console.log(`   📋 Vídeo ${i+1}: ${videoUrl}`);
           const localPath = getLocalPathFromUrl(videoUrl);
+          console.log(`   📁 Caminho local vídeo: ${localPath}`);
           
           if (localPath) {
-            console.log(`   📤 Fazendo upload do vídeo ${i+1}: ${path.basename(localPath)}`);
+            console.log(`   📤 Iniciando upload do vídeo ${i+1}: ${path.basename(localPath)}`);
             const fileId = await uploadFileToStrapi(localPath, path.basename(localPath));
             if (fileId) {
               uploadedVideos.push(fileId);
+              console.log(`   ✅ Vídeo ${i+1} enviado com sucesso (ID: ${fileId})`);
+            } else {
+              console.log(`   ❌ Falha no upload do vídeo ${i+1}`);
             }
           } else {
-            console.log(`   ⚠️  Caminho local não encontrado para: ${videoUrl}`);
+            console.log(`   ⚠️  Caminho local não encontrado para vídeo: ${videoUrl}`);
           }
         }
       }
@@ -397,6 +433,54 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
     try {
       console.log(`   📤 Enviando imóvel "${imovelData.titulo}" para o Strapi...`);
       
+      // Processar fotos
+      const uploadedFotos = [];
+      if (imovelData.fotos && imovelData.fotos.length > 0) {
+        console.log(`   📸 Processando ${imovelData.fotos.length} fotos...`);
+        for (let i = 0; i < imovelData.fotos.length; i++) {
+          const foto = imovelData.fotos[i];
+          console.log(`   📋 Foto ${i+1}: ${foto}`);
+          const localPath = getLocalPathFromUrl(foto);
+          console.log(`   📁 Caminho local: ${localPath}`);
+          if (localPath) {
+            console.log(`   📤 Iniciando upload da foto ${i+1}: ${path.basename(localPath)}`);
+            const fileId = await uploadFileToStrapi(localPath, path.basename(localPath));
+            if (fileId) {
+              uploadedFotos.push(fileId);
+              console.log(`   ✅ Foto ${i+1} enviada com sucesso (ID: ${fileId})`);
+            } else {
+              console.log(`   ❌ Falha no upload da foto ${i+1}`);
+            }
+          } else {
+            console.log(`   ⚠️  Caminho local não encontrado para: ${foto}`);
+          }
+        }
+      }
+
+      // Processar vídeos
+      const uploadedVideos = [];
+      if (imovelData.videos && imovelData.videos.length > 0) {
+        console.log(`   🎥 Processando ${imovelData.videos.length} vídeos...`);
+        for (let i = 0; i < imovelData.videos.length; i++) {
+          const video = imovelData.videos[i];
+          console.log(`   📋 Vídeo ${i+1}: ${video}`);
+          const localPath = getLocalPathFromUrl(video);
+          console.log(`   📁 Caminho local: ${localPath}`);
+          if (localPath) {
+            console.log(`   📤 Iniciando upload do vídeo ${i+1}: ${path.basename(localPath)}`);
+            const fileId = await uploadFileToStrapi(localPath, path.basename(localPath));
+            if (fileId) {
+              uploadedVideos.push(fileId);
+              console.log(`   ✅ Vídeo ${i+1} enviado com sucesso (ID: ${fileId})`);
+            } else {
+              console.log(`   ❌ Falha no upload do vídeo ${i+1}`);
+            }
+          } else {
+            console.log(`   ⚠️  Caminho local não encontrado para: ${video}`);
+          }
+        }
+      }
+      
       const url = new URL(STRAPI_URL);
       
       return new Promise((resolve) => {
@@ -430,7 +514,23 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
                 console.log(`   ➕ Criando novo imóvel`);
               }
 
-              const payload = JSON.stringify(imovelData);
+              // Preparar dados com uploads
+              const imovelParaStrapi = {
+                titulo: imovelData.titulo,
+                description: imovelData.descricao,
+                price: imovelData.preco,
+                tipo_contrato: imovelData.tipo_contrato || 'venda',
+                tipo_imovel: imovelData.tipo_imovel || 'casa',
+                active: true,
+                bairro: imovelData.bairro,
+                cidade: imovelData.cidade,
+                tipologia: imovelData.tipologia,
+                codigo: imovelData.codigo,
+                images: uploadedFotos,
+                videos: uploadedVideos
+              };
+
+              const payload = JSON.stringify(imovelParaStrapi);
               const options = {
                 hostname: url.hostname,
                 port: url.port || 443,
@@ -511,8 +611,8 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
         destaque: true,
         codigo: "CASA001",
         fotos: [
-          "/uploads/imoveis/casa1.jpg",
-          "/uploads/imoveis/casa2.jpg"
+          "/uploads/imoveis/0bcd5d82-7841-48f2-8f22-1fe1f5c135fd.jpg",
+          "/uploads/imoveis/1ecfe490-3f51-45fd-96c9-eab96872fcd2.jpg"
         ],
         videos: []
       },
@@ -534,10 +634,10 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
         destaque: false,
         codigo: "APTO001",
         fotos: [
-          "/uploads/imoveis/apto1.jpg"
+          "/uploads/imoveis/20448267-d369-4b2d-90a4-1b93b11e27a2.jpg"
         ],
         videos: [
-          "/uploads/imoveis/tour-apto.mp4"
+          "/uploads/imoveis/videos/2acc98f7-9d97-421a-8122-3c58418d549e.mp4"
         ]
       }
     ];
