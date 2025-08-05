@@ -55,7 +55,11 @@ export async function POST(
 
     const { stdout, stderr } = await execAsync(command, {
       timeout: 60000, // 1 minuto de timeout
-      cwd: process.cwd()
+      cwd: process.cwd(),
+      env: {
+        ...process.env,
+        ADMIN_TOKEN: token
+      }
     })
 
     if (stderr && !stderr.includes('Warning')) {
