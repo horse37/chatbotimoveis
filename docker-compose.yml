@@ -7,7 +7,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "4000:4000"
+      - "4005:4005"
     environment:
       - NODE_ENV=production
       # Usando a string de conexão para o banco de dados externo

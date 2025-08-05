@@ -69,14 +69,14 @@ async function uploadFileToStrapi(filePath, filename) {
     const bodyBuffer = Buffer.concat(body);
 
     // Usar URL completa para evitar problemas de hostname
-    const uploadUrl = `${STRAPI_URL}/api/upload`;
+    const uploadUrl = `${STRAPI_URL}/upload`;
     console.log(`   📤 Enviando para: ${uploadUrl}`);
 
     const response = await new Promise((resolve, reject) => {
       const options = {
         hostname: 'whatsapp-strapi.xjueib.easypanel.host',
         port: 443,
-        path: '/api/upload',
+        path: '/upload',
         method: 'POST',
         headers: {
           'Content-Type': `multipart/form-data; boundary=${boundary}`,
@@ -112,7 +112,7 @@ async function uploadFileToStrapi(filePath, filename) {
     } else {
       console.log(`   ❌ Erro ao enviar arquivo: ${filename} (Status: ${response.status})`, response.data);
       if (response.status === 405) {
-        console.log(`   🔧 Verifique se o endpoint /api/upload está correto e habilitado no Strapi`);
+        console.log(`   🔧 Verifique se o endpoint /upload está correto e habilitado no Strapi`);
       } else if (response.status === 401) {
         console.log(`   🔧 Verifique se o STRAPI_API_TOKEN está configurado corretamente`);
       }
@@ -145,7 +145,7 @@ function getLocalPathFromUrl(url) {
 async function testStrapiUploadEndpoint() {
   try {
     console.log('🔍 Testando endpoint de upload do Strapi...');
-    const response = await fetchWithHttps(`${STRAPI_URL}/api/upload`, {
+    const response = await fetchWithHttps(`${STRAPI_URL}/upload`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${STRAPI_API_TOKEN}`
