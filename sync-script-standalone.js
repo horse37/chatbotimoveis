@@ -53,7 +53,7 @@ async function uploadFileToStrapi(filePath, filename) {
     form.append('files', fs.createReadStream(filePath));
 
     const axios = require('axios');
-    const response = await axios.post(`${STRAPI_URL}/upload`, form, {
+    const response = await axios.post(`${STRAPI_URL}/api/upload`, form, {
       headers: {
         'Accept': 'application/json',
         ...form.getHeaders()
@@ -71,21 +71,28 @@ async function uploadFileToStrapi(filePath, filename) {
     }
 
   } catch (error) {
-    console.log(`   ❌ Erro ao fazer upload de ${filename}:`);
-    
-    if (error.response) {
-      console.log(`   📊 Status: ${error.response.status}`);
-      console.log(`   📄 Erro: ${error.response.data?.error || error.response.data?.message || JSON.stringify(error.response.data)}`);
-    } else if (error.code === 'ENOTFOUND') {
-      console.log(`   🔍 Domínio não encontrado`);
-    } else if (error.code === 'ECONNREFUSED') {
-      console.log(`   🔌 Conexão recusada`);
-    } else {
-      console.log(`   ❗ Erro: ${error.message}`);
+      console.log(`   ❌ Erro ao fazer upload de ${filename}:`);
+      
+      if (error.response) {
+        console.log(`   📊 Status: ${error.response.status}`);
+        console.log(`   📄 Resposta do servidor:`, error.response.data);
+        
+        // Se a resposta for texto, mostrar como string
+        if (typeof error.response.data === 'string') {
+          console.log(`   📝 Resposta texto: "${error.response.data}"`);
+        }
+        
+        console.log(`   📄 Erro: ${error.response.data?.error || error.response.data?.message || JSON.stringify(error.response.data)}`);
+      } else if (error.code === 'ENOTFOUND') {
+        console.log(`   🔍 Domínio não encontrado`);
+      } else if (error.code === 'ECONNREFUSED') {
+        console.log(`   🔌 Conexão recusada`);
+      } else {
+        console.log(`   ❗ Erro: ${error.message}`);
+      }
+      
+      return null;
     }
-    
-    return null;
-  }
 }
 
 // Função para obter caminho local
