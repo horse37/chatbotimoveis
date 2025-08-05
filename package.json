@@ -3,7 +3,7 @@
   "version": "1.0.2",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbo -p 3001",
+    "dev": "next dev --turbo -p 4000",
     "build": "next build",
     "start": "node init-permissions.js && next start -p 4000",
     "start:safe": "next start -p 4000",

@@ -31,6 +31,9 @@ export default function AdminImoveisPage() {
   const { user, loading: authLoading } = useAuth()
   const isAdmin = user?.role === 'admin'
   const [imoveis, setImoveis] = useState<Imovel[]>([])
+  const [totalPages, setTotalPages] = useState(1)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalImoveis, setTotalImoveis] = useState(0)
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || '')
@@ -55,11 +58,16 @@ export default function AdminImoveisPage() {
       if (tipoFilter) params.append('tipo', tipoFilter)
       if (searchTerm) params.append('search', searchTerm)
 
+      params.append('page', currentPage.toString())
+      params.append('limit', '10')
+      
       const response = await fetchAuthApi(`admin/imoveis?${params.toString()}`)
 
       if (response.ok) {
         const data = await response.json()
         setImoveis(data.imoveis)
+        setTotalPages(data.pagination?.totalPages || 1)
+        setTotalImoveis(data.pagination?.total || 0)
       } else if (response.status === 401) {
         router.push('/login')
       }
@@ -68,13 +76,18 @@ export default function AdminImoveisPage() {
     } finally {
       setLoading(false)
     }
-  }, [statusFilter, tipoFilter, router, searchTerm])
+  }, [statusFilter, tipoFilter, router, searchTerm, currentPage])
 
   useEffect(() => {
     fetchImoveis()
   }, [statusFilter, tipoFilter, fetchImoveis])
 
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+  }
+
   const handleSearch = () => {
+    setCurrentPage(1)
     fetchImoveis()
   }
 
@@ -295,7 +308,7 @@ export default function AdminImoveisPage() {
             <p className="text-gray-600">Visualize e gerencie todos os imóveis cadastrados</p>
           </div>
           <div className="flex space-x-3">
-            {user?.isAdmin && (
+            {isAdmin && (
               <button
                 onClick={handleSync}
                 disabled={isSyncing}
@@ -506,6 +519,80 @@ export default function AdminImoveisPage() {
             </div>
           )}
         </div>
+
+        {/* Paginação */}
+        {totalPages > 1 && (
+          <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 rounded-lg shadow-sm">
+            <div className="flex-1 flex justify-between sm:hidden">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Anterior
+              </button>
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Próximo
+              </button>
+            </div>
+            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm text-gray-700">
+                  Mostrando{' '}
+                  <span className="font-medium">{(currentPage - 1) * 10 + 1}</span>
+                  {' '}até{' '}
+                  <span className="font-medium">
+                    {Math.min(currentPage * 10, totalImoveis)}
+                  </span>
+                  {' '}de{' '}
+                  <span className="font-medium">{totalImoveis}</span>
+                  {' '}resultados
+                </p>
+              </div>
+              <div>
+                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="sr-only">Anterior</span>
+                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => handlePageChange(page)}
+                      className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                        page === currentPage
+                          ? 'z-10 bg-primary-50 border-primary-500 text-primary-600'
+                          : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="sr-only">Próximo</span>
+                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </nav>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Modal de Progresso da Sincronização Individual */}
         {showSyncModal && (
