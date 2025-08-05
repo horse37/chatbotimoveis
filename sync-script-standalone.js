@@ -47,13 +47,13 @@ async function uploadFileToStrapi(filePath, filename) {
     const stats = fs.statSync(filePath);
     console.log(`   📁 Preparando upload: ${filename} (${(stats.size / 1024 / 1024).toFixed(2)} MB)`);
 
-    // Preparar FormData com axios (igual ao upload-sem-token.js)
-    const FormData = require('form-data');
+    // Preparar FormData (igual ao upload-sem-token.js)
     const form = new FormData();
     form.append('files', fs.createReadStream(filePath));
 
-    const axios = require('axios');
-    const response = await axios.post(`${STRAPI_URL}/api/upload`, form, {
+    console.log(`   📤 Enviando ${filename}...`);
+
+    const response = await axios.post(`${STRAPI_URL}/upload`, form, {
       headers: {
         'Accept': 'application/json',
         ...form.getHeaders()
@@ -61,6 +61,7 @@ async function uploadFileToStrapi(filePath, filename) {
       timeout: 30000
     });
 
+    // Processar resposta (igual ao upload-sem-token.js)
     if (response.data && response.data[0]) {
       const file = response.data[0];
       console.log(`   ✅ Upload realizado: ${filename} (ID: ${file.id})`);
@@ -71,28 +72,27 @@ async function uploadFileToStrapi(filePath, filename) {
     }
 
   } catch (error) {
-      console.log(`   ❌ Erro ao fazer upload de ${filename}:`);
+    console.log(`   ❌ Erro ao fazer upload de ${filename}:`);
+    
+    if (error.response) {
+      console.log(`   📊 Status: ${error.response.status}`);
+      console.log(`   📄 Erro: ${error.response.data?.error || error.response.data?.message || JSON.stringify(error.response.data)}`);
       
-      if (error.response) {
-        console.log(`   📊 Status: ${error.response.status}`);
-        console.log(`   📄 Resposta do servidor:`, error.response.data);
-        
-        // Se a resposta for texto, mostrar como string
-        if (typeof error.response.data === 'string') {
-          console.log(`   📝 Resposta texto: "${error.response.data}"`);
-        }
-        
-        console.log(`   📄 Erro: ${error.response.data?.error || error.response.data?.message || JSON.stringify(error.response.data)}`);
-      } else if (error.code === 'ENOTFOUND') {
-        console.log(`   🔍 Domínio não encontrado`);
-      } else if (error.code === 'ECONNREFUSED') {
-        console.log(`   🔌 Conexão recusada`);
-      } else {
-        console.log(`   ❗ Erro: ${error.message}`);
+      if (error.response.status === 401 || error.response.status === 403) {
+        console.log(`   💡 O upload parece exigir autenticação.`);
+      } else if (error.response.status === 413) {
+        console.log(`   💡 Arquivo muito grande. Verifique o limite de upload.`);
       }
-      
-      return null;
+    } else if (error.code === 'ENOTFOUND') {
+      console.log(`   🔍 Domínio não encontrado`);
+    } else if (error.code === 'ECONNREFUSED') {
+      console.log(`   🔌 Conexão recusada`);
+    } else {
+      console.log(`   ❗ Erro: ${error.message}`);
     }
+    
+    return null;
+  }
 }
 
 // Função para obter caminho local
