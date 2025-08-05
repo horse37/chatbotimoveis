@@ -283,8 +283,8 @@ async function syncSingleImovel(imovelData) {
     const existingResponse = await fetchWithHttps(`${STRAPI_URL}/api/imoveis?filters[id_integracao][$eq]=${encodeURIComponent(imovelData.id)}`, {
       method: 'GET',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${STRAPI_TOKEN}`
+        'Content-Type': 'application/json'
+        // Sem autenticação para perfil público
       }
     });
 
