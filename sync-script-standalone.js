@@ -556,7 +556,7 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
               const method = (checkResponse && checkResponse.length > 0) ? 'PUT' : 'POST';
               const path = (checkResponse && checkResponse.length > 0) 
                 ? `/imoveis/${checkResponse[0].id}` 
-                : '/imoveis';
+                 : '/imoveis';
               
               if (method === 'PUT') {
                 console.log(`   🔄 Atualizando imóvel existente (ID: ${checkResponse[0].id})`);
