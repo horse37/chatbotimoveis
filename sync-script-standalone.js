@@ -699,7 +699,7 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
 // Função para buscar imóvel específico via API
 async function getImovelFromAPI(imovelId) {
   try {
-    const API_URL = process.env.NEXTAUTH_URL || 'http://localhost:4000';
+    const API_URL = process.env.NEXTAUTH_URL || 'http://127.0.0.1:4000';
     const response = await axios.get(`${API_URL}/api/admin/imoveis/${imovelId}`, {
       headers: {
         'Authorization': `Bearer ${process.env.ADMIN_TOKEN || ''}`
