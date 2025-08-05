@@ -5,9 +5,11 @@
  * Uso: node sync-script-standalone.js
  */
 
-const https = require('https');
 const fs = require('fs');
 const path = require('path');
+const https = require('https');
+const axios = require('axios');
+const FormData = require('form-data');
 const { URL } = require('url');
 
 // Configurações
@@ -34,70 +36,54 @@ function getContentType(filename) {
   return types[ext] || 'application/octet-stream';
 }
 
-// Função para upload de arquivos usando https nativo
+// Função para upload de arquivos usando axios (mesma lógica do upload-sem-token.js)
 async function uploadFileToStrapi(filePath, filename) {
   try {
     if (!fs.existsSync(filePath)) {
-      console.log(`   ⚠️  Arquivo não encontrado: ${filePath}`);
+      console.log(`   ❌ Arquivo não encontrado: ${filePath}`);
       return null;
     }
 
-    const fileContent = fs.readFileSync(filePath);
-    const boundary = '----formdata-' + Math.random().toString(36);
-    
-    let body = [];
-    body.push(Buffer.from(`--${boundary}\r\n`));
-    body.push(Buffer.from(`Content-Disposition: form-data; name="files"; filename="${filename}"\r\n`));
-    body.push(Buffer.from(`Content-Type: ${getContentType(filename)}\r\n\r\n`));
-    body.push(fileContent);
-    body.push(Buffer.from(`\r\n--${boundary}--\r\n`));
-    
-    const bodyBuffer = Buffer.concat(body);
-    const url = new URL(STRAPI_URL);
+    const stats = fs.statSync(filePath);
+    console.log(`   📁 Preparando upload: ${filename} (${(stats.size / 1024 / 1024).toFixed(2)} MB)`);
 
-    return new Promise((resolve, reject) => {
-      const options = {
-        hostname: url.hostname,
-        port: url.port || 443,
-        path: '/upload',
-        method: 'POST',
-        headers: {
-          'Content-Type': `multipart/form-data; boundary=${boundary}`,
-          'Content-Length': bodyBuffer.length,
-         // // Removido autenticação - upload público permitido
-        }
-      };
+    // Preparar FormData com axios (igual ao upload-sem-token.js)
+    const FormData = require('form-data');
+    const form = new FormData();
+    form.append('files', fs.createReadStream(filePath));
 
-      const req = https.request(options, (res) => {
-        let data = '';
-        res.on('data', chunk => data += chunk);
-        res.on('end', () => {
-          try {
-            const parsedData = JSON.parse(data);
-            if (res.statusCode === 200 && parsedData[0]) {
-              console.log(`   ✅ Arquivo enviado: ${filename} (ID: ${parsedData[0].id})`);
-              resolve(parsedData[0].id);
-            } else {
-              console.log(`   ❌ Erro ao enviar arquivo: ${filename} (Status: ${res.statusCode})`, parsedData);
-              resolve(null);
-            }
-          } catch (e) {
-            console.log(`   ❌ Erro ao processar resposta: ${e.message}`);
-            resolve(null);
-          }
-        });
-      });
-
-      req.on('error', (error) => {
-        console.log(`   ❌ Erro de rede ao enviar ${filename}:`, error.message);
-        resolve(null);
-      });
-
-      req.write(bodyBuffer);
-      req.end();
+    const axios = require('axios');
+    const response = await axios.post(`${STRAPI_URL}/upload`, form, {
+      headers: {
+        'Accept': 'application/json',
+        ...form.getHeaders()
+      },
+      timeout: 30000
     });
+
+    if (response.data && response.data[0]) {
+      const file = response.data[0];
+      console.log(`   ✅ Upload realizado: ${filename} (ID: ${file.id})`);
+      return file.id;
+    } else {
+      console.log(`   ❌ Resposta inválida do servidor`);
+      return null;
+    }
+
   } catch (error) {
-    console.log(`   ❌ Erro ao processar arquivo ${filename}:`, error.message);
+    console.log(`   ❌ Erro ao fazer upload de ${filename}:`);
+    
+    if (error.response) {
+      console.log(`   📊 Status: ${error.response.status}`);
+      console.log(`   📄 Erro: ${error.response.data?.error || error.response.data?.message || JSON.stringify(error.response.data)}`);
+    } else if (error.code === 'ENOTFOUND') {
+      console.log(`   🔍 Domínio não encontrado`);
+    } else if (error.code === 'ECONNREFUSED') {
+      console.log(`   🔌 Conexão recusada`);
+    } else {
+      console.log(`   ❗ Erro: ${error.message}`);
+    }
+    
     return null;
   }
 }
