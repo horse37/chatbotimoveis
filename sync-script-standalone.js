@@ -68,6 +68,10 @@ async function uploadFileToStrapi(filePath, filename) {
     
     const bodyBuffer = Buffer.concat(body);
 
+    // Usar URL completa para evitar problemas de hostname
+    const uploadUrl = `${STRAPI_URL}/api/upload`;
+    console.log(`   📤 Enviando para: ${uploadUrl}`);
+
     const response = await new Promise((resolve, reject) => {
       const options = {
         hostname: 'whatsapp-strapi.xjueib.easypanel.host',
@@ -76,7 +80,8 @@ async function uploadFileToStrapi(filePath, filename) {
         method: 'POST',
         headers: {
           'Content-Type': `multipart/form-data; boundary=${boundary}`,
-          'Content-Length': bodyBuffer.length
+          'Content-Length': bodyBuffer.length,
+          'Authorization': `Bearer ${STRAPI_API_TOKEN}`
         }
       };
 
@@ -105,7 +110,12 @@ async function uploadFileToStrapi(filePath, filename) {
       console.log(`   ✅ Arquivo enviado: ${filename} (ID: ${uploadedFile.id})`);
       return uploadedFile.id;
     } else {
-      console.log(`   ❌ Erro ao enviar arquivo: ${filename}`, response.data);
+      console.log(`   ❌ Erro ao enviar arquivo: ${filename} (Status: ${response.status})`, response.data);
+      if (response.status === 405) {
+        console.log(`   🔧 Verifique se o endpoint /api/upload está correto e habilitado no Strapi`);
+      } else if (response.status === 401) {
+        console.log(`   🔧 Verifique se o STRAPI_API_TOKEN está configurado corretamente`);
+      }
       return null;
     }
   } catch (error) {
@@ -130,6 +140,24 @@ function getLocalPathFromUrl(url) {
   }
   
   return null;
+}
+
+async function testStrapiUploadEndpoint() {
+  try {
+    console.log('🔍 Testando endpoint de upload do Strapi...');
+    const response = await fetchWithHttps(`${STRAPI_URL}/api/upload`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${STRAPI_API_TOKEN}`
+      }
+    });
+    
+    console.log(`   ✅ Endpoint de upload acessível (Status: ${response.status})`);
+    return response.status === 200 || response.status === 204 || response.status === 405;
+  } catch (error) {
+    console.log(`   ❌ Erro ao acessar endpoint de upload: ${error.message}`);
+    return false;
+  }
 }
 
 async function getAllImoveisFromStrapi() {
@@ -183,12 +211,59 @@ async function syncSingleImovel(imovelData) {
     console.log(`   📸 ${fotos.length} fotos encontradas`);
     console.log(`   🎥 ${videos.length} vídeos encontrados`);
     
+    // Processar upload das imagens
+    const uploadedFotos = [];
+    if (uploadAvailable && fotos.length > 0) {
+      console.log(`   📸 Processando ${fotos.length} fotos...`);
+      for (let i = 0; i < fotos.length; i++) {
+        const fotoUrl = fotos[i];
+        const localPath = getLocalPathFromUrl(fotoUrl);
+        
+        if (localPath) {
+          console.log(`   📤 Fazendo upload da foto ${i+1}: ${path.basename(localPath)}`);
+          const fileId = await uploadFileToStrapi(localPath, path.basename(localPath));
+          if (fileId) {
+            uploadedFotos.push(fileId);
+          }
+        } else {
+          console.log(`   ⚠️  Caminho local não encontrado para: ${fotoUrl}`);
+        }
+      }
+    } else {
+      console.log(`   ⚠️  Upload de imagens não disponível - salvando URLs originais`);
+    }
+    
+    // Processar upload dos vídeos
+    const uploadedVideos = [];
+    if (uploadAvailable && videos.length > 0) {
+      for (let i = 0; i < videos.length; i++) {
+        const videoUrl = videos[i];
+        const localPath = getLocalPathFromUrl(videoUrl);
+        
+        if (localPath) {
+          console.log(`   📤 Fazendo upload do vídeo ${i+1}: ${path.basename(localPath)}`);
+          const fileId = await uploadFileToStrapi(localPath, path.basename(localPath));
+          if (fileId) {
+            uploadedVideos.push(fileId);
+          }
+        } else {
+          console.log(`   ⚠️  Caminho local não encontrado para: ${videoUrl}`);
+        }
+      }
+    } else {
+      console.log(`   ⚠️  Upload de vídeos não disponível - salvando URLs originais`);
+    }
+    
     return {
       id: imovelData.id,
       titulo: imovelData.titulo,
       status: 'processado',
       fotos: fotos.length,
-      videos: videos.length
+      videos: videos.length,
+      fotosUpload: uploadedFotos.length,
+      videosUpload: uploadedVideos.length,
+      fotosIds: uploadedFotos,
+      videosIds: uploadedVideos
     };
   } catch (error) {
     console.log(`   ❌ Erro ao processar imóvel ${imovelData.id}:`, error.message);
@@ -212,6 +287,12 @@ async function main() {
   
   if (!STRAPI_API_TOKEN) {
     console.log('⚠️  Atenção: STRAPI_API_TOKEN não configurado - uploads podem falhar');
+  }
+  
+  // Testar endpoint de upload
+  const uploadAvailable = await testStrapiUploadEndpoint();
+  if (!uploadAvailable) {
+    console.log('⚠️  Endpoint de upload não está acessível - uploads serão pulados');
   }
   
   try {
