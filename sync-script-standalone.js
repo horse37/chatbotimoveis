@@ -666,7 +666,14 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
                 latitude: parseFloat(imovelData.latitude) || null,
                 longitude: parseFloat(imovelData.longitude) || null,
                 caracteristicas: imovelData.caracteristicas || '',
-                tipologia: imovelData.tipologia || '',
+                tipologia: (() => {
+                  const caracteristicas = [];
+                  if (imovelData.area_construida) caracteristicas.push(`area_construida ${String(imovelData.area_construida)}`);
+                  if (imovelData.area_total) caracteristicas.push(`area_total ${String(imovelData.area_total)}`);
+                  if (imovelData.banheiros) caracteristicas.push(`banheiros ${String(imovelData.banheiros)}`);
+                  if (imovelData.quartos) caracteristicas.push(`quartos ${String(imovelData.quartos)}`);
+                  return caracteristicas.join(', ');
+                })(),
                 codigo: imovelData.codigo || imovelData.id,
                 url: `https://coopcorretores.com.br/imoveis/${originalId || imovelData.id}`,
                 id_integracao: originalId || imovelData.id,
