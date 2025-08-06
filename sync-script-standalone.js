@@ -570,7 +570,7 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
         const checkOptions = {
           hostname: url.hostname,
           port: url.port || 443,
-          path: `/api/imoveis?filters[id_integracao][$eq]=${encodeURIComponent(originalId || imovelData.id)}`,
+          path: `/imoveis?filters[id_integracao][$eq]=${encodeURIComponent(originalId || imovelData.id)}`,
           method: 'GET',
           headers: {
             'Content-Type': 'application/json'
@@ -591,8 +591,8 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
               const existingImoveis = checkResponse.data || checkResponse;
               const method = (existingImoveis && existingImoveis.length > 0) ? 'PUT' : 'POST';
               const path = (existingImoveis && existingImoveis.length > 0) 
-                ? `/api/imoveis/${existingImoveis[0].id}` 
-                 : '/api/imoveis';
+                ? `/imoveis/${existingImoveis[0].id}` 
+                 : '/imoveis';
               
               if (method === 'PUT') {
                 console.log(`   🔄 Atualizando imóvel existente (ID: ${existingImoveis[0].id})`);
