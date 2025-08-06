@@ -54,8 +54,8 @@ async function checkFileExistsInStrapi(filename) {
 async function getAllImoveisFromAPI() {
   try {
     const API_URL = process.env.NEXTAUTH_URL || 'http://localhost:4000';
-    console.log(`🔍 [EASYPANEL-LOG] Buscando todos os imóveis na API: ${API_URL}/api/imoveis`);
-    const response = await axios.get(`${API_URL}/api/imoveis`, {
+    console.log(`🔍 [EASYPANEL-LOG] Buscando todos os imóveis na API: ${API_URL}/api/imoveis?limit=50`);
+    const response = await axios.get(`${API_URL}/api/imoveis?limit=50`, {
       timeout: 30000
     });
     
