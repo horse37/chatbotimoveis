@@ -829,35 +829,44 @@ async function main() {
   let imoveis = [];
   
   if (imovelId) {
-    // Usar imóvel de exemplo para teste - substitua com sua fonte de dados real
-    console.log(`🎯 Usando dados de exemplo para imóvel ID: ${imovelId}`);
-    imoveis = [{
-      id: imovelId,
-      codigo: `COD-${imovelId.substring(0, 8)}`,
-      titulo: 'Casa Teste',
-      descricao: 'Casa de teste para sincronização',
-      tipo: 'casa',
-      status: 'disponivel',
-      preco: 250000,
-      area_total: 200,
-      area_util: 180,
-      quartos: 3,
-      banheiros: 2,
-      vagas_garagem: 2,
-      endereco: 'Rua Teste, 123',
-      bairro: 'Centro',
-      cidade: 'São Paulo',
-      estado: 'SP',
-      cep: '00000-000',
-      latitude: -23.5505,
-      longitude: -46.6333,
-      caracteristicas: 'Casa teste com características especiais',
-      fotos: [
-        'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800',
-        'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=800'
-      ],
-      videos: []
-    }];
+    // Buscar dados reais do imóvel via API
+    console.log(`🎯 Buscando dados reais do imóvel ID: ${imovelId}`);
+    const imovelData = await getImovelFromAPI(imovelId);
+    
+    if (imovelData) {
+      imoveis = [imovelData];
+      console.log(`✅ Dados do imóvel carregados com sucesso!`);
+    } else {
+      console.log(`❌ Não foi possível carregar os dados do imóvel ${imovelId}`);
+      console.log(`🎯 Usando dados de exemplo como fallback`);
+      imoveis = [{
+        id: imovelId,
+        codigo: `COD-${imovelId.substring(0, 8)}`,
+        titulo: 'Casa Teste (Fallback)',
+        descricao: 'Casa de teste para sincronização - dados de fallback',
+        tipo: 'casa',
+        status: 'disponivel',
+        preco: 250000,
+        area_total: 200,
+        area_util: 180,
+        quartos: 3,
+        banheiros: 2,
+        vagas_garagem: 2,
+        endereco: 'Rua Teste, 123',
+        bairro: 'Centro',
+        cidade: 'São Paulo',
+        estado: 'SP',
+        cep: '00000-000',
+        latitude: -23.5505,
+        longitude: -46.6333,
+        caracteristicas: 'Casa teste com características especiais',
+        fotos: [
+          'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800',
+          'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=800'
+        ],
+        videos: []
+      }];
+    }
   } else {
     // Buscar todos os imóveis (use a função de exemplo)
     imoveis = getImoveisExemplo();
