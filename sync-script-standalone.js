@@ -286,42 +286,87 @@ async function syncSingleImovel(imovel) {
       }
     };
 
-    // Enviar para o Strapi
+    // Verificar se imóvel já existe no Strapi
     const response = await new Promise((resolve, reject) => {
       const url = new URL(STRAPI_URL);
-      const data = JSON.stringify(imovelData);
-      const options = {
+      
+      // Primeiro, verificar se o imóvel já existe
+      const checkOptions = {
         hostname: url.hostname,
         port: url.port || 443,
-        path: '/imoveis',
-        method: 'POST',
+        path: `/imoveis?id_integracao=${encodeURIComponent(imovel.id)}`,
+        method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(data),
-         // 'Authorization': `Bearer ${STRAPI_API_TOKEN}`
+          'Content-Type': 'application/json'
         }
       };
+      
+      console.log(`🔍 Verificando se imóvel já existe no Strapi pelo id_integracao: ${imovel.id}`);
 
-      const req = https.request(options, (res) => {
-        let responseData = '';
-        res.on('data', chunk => responseData += chunk);
+      const checkReq = https.request(checkOptions, (res) => {
+        let data = '';
+        res.on('data', chunk => data += chunk);
         res.on('end', () => {
           try {
-            const parsed = JSON.parse(responseData);
-            if (res.statusCode === 200) {
-              resolve(parsed);
+            const checkResponse = JSON.parse(data);
+            console.log(`📊 Resposta da verificação:`, JSON.stringify(checkResponse, null, 2));
+            
+            const existingImoveis = checkResponse.data || checkResponse;
+            const method = (existingImoveis && existingImoveis.length > 0) ? 'PUT' : 'POST';
+            const path = (existingImoveis && existingImoveis.length > 0) 
+              ? `/imoveis/${existingImoveis[0].id}` 
+              : '/imoveis';
+            
+            if (method === 'PUT') {
+              console.log(`   🔄 Atualizando imóvel existente (ID: ${existingImoveis[0].id})`);
             } else {
-              reject(new Error(`HTTP ${res.statusCode}: ${responseData}`));
+              console.log(`   ➕ Criando novo imóvel`);
             }
+
+            // Adicionar id_integracao aos dados
+            imovelData.data.id_integracao = imovel.id;
+            
+            const requestData = JSON.stringify(imovelData);
+            const requestOptions = {
+              hostname: url.hostname,
+              port: url.port || 443,
+              path: path,
+              method: method,
+              headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(requestData)
+              }
+            };
+
+            const req = https.request(requestOptions, (res) => {
+              let responseData = '';
+              res.on('data', chunk => responseData += chunk);
+              res.on('end', () => {
+                try {
+                  const parsed = JSON.parse(responseData);
+                  if (res.statusCode === 200 || res.statusCode === 201) {
+                    resolve(parsed);
+                  } else {
+                    reject(new Error(`HTTP ${res.statusCode}: ${responseData}`));
+                  }
+                } catch (e) {
+                  reject(new Error('Invalid JSON response'));
+                }
+              });
+            });
+
+            req.on('error', reject);
+            req.write(requestData);
+            req.end();
+            
           } catch (e) {
-            reject(new Error('Invalid JSON response'));
+            reject(new Error(`Erro ao verificar duplicatas: ${e.message}`));
           }
         });
       });
 
-      req.on('error', reject);
-      req.write(data);
-      req.end();
+      checkReq.on('error', reject);
+      checkReq.end();
     });
 
     console.log(`   ✅ Imóvel sincronizado com ID: ${response.data.id}`);
