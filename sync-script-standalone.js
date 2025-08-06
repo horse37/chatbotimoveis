@@ -805,6 +805,7 @@ async function getImovelFromAPI(imovelId) {
       status: imovel.status,
       preco: imovel.preco,
       area_total: imovel.area_total,
+      area_construida: imovel.area_util || imovel.area_construida,
       area_util: imovel.area_util,
       quartos: imovel.quartos,
       banheiros: imovel.banheiros,
