@@ -672,6 +672,7 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
                   if (imovelData.area_total) caracteristicas.push(`area_total ${String(imovelData.area_total)}`);
                   if (imovelData.banheiros) caracteristicas.push(`banheiros ${String(imovelData.banheiros)}`);
                   if (imovelData.quartos) caracteristicas.push(`quartos ${String(imovelData.quartos)}`);
+                  if (imovelData.vagas_garagem) caracteristicas.push(`vagas_garagem ${String(imovelData.vagas_garagem)}`);
                   return caracteristicas.join(', ');
                 })(),
                 codigo: imovelData.codigo || imovelData.id,
