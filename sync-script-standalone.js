@@ -548,18 +548,18 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
       const url = new URL(STRAPI_URL);
       
       return new Promise((resolve) => {
-        // Verificar se o imóvel já existe no Strapi
+        // Verificar se o imóvel já existe no Strapi pelo id_integracao
         const checkOptions = {
           hostname: url.hostname,
           port: url.port || 443,
-          path: `/imoveis?filters[codigo][$eq]=${encodeURIComponent(imovelData.codigo)}`,
+          path: `/imoveis?filters[id_integracao][$eq]=${encodeURIComponent(originalId || imovelData.id)}`,
           method: 'GET',
           headers: {
             'Content-Type': 'application/json'
           }
         };
         
-        console.log(`🔍 Verificando se imóvel já existe no Strapi: ${imovelData.codigo}`);
+        console.log(`🔍 Verificando se imóvel já existe no Strapi pelo id_integracao: ${originalId || imovelData.id}`);
 
         const checkReq = https.request(checkOptions, (res) => {
           let data = '';
