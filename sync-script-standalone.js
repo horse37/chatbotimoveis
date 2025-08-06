@@ -281,7 +281,15 @@ async function syncSingleImovel(imovel) {
         active: true,
         bairro: imovel.bairro,
         cidade: imovel.cidade,
-        tipologia: imovel.tipologia,
+        tipologia: (() => {
+          const caracteristicas = [];
+          if (imovel.area_construida) caracteristicas.push(`area_construida ${String(imovel.area_construida)}`);
+          if (imovel.area_total) caracteristicas.push(`area_total ${String(imovel.area_total)}`);
+          if (imovel.banheiros) caracteristicas.push(`banheiros ${String(imovel.banheiros)}`);
+          if (imovel.quartos) caracteristicas.push(`quartos ${String(imovel.quartos)}`);
+          if (imovel.vagas_garagem) caracteristicas.push(`vagas_garagem ${String(imovel.vagas_garagem)}`);
+          return caracteristicas.join(', ');
+        })(),
         images: uploadedFotos
       }
     };
