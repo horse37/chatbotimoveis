@@ -53,8 +53,8 @@ async function checkFileExistsInStrapi(filename) {
 
 async function getAllImoveisFromAPI() {
   try {
-    const API_URL = process.env.NEXTAUTH_URL || 'http://127.0.0.1:4000';
-    console.log(`🔍 Buscando todos os imóveis na API: ${API_URL}/api/imoveis`);
+    const API_URL = process.env.NEXTAUTH_URL || 'http://localhost:4000';
+    console.log(`🔍 [EASYPANEL-LOG] Buscando todos os imóveis na API: ${API_URL}/api/imoveis`);
     const response = await axios.get(`${API_URL}/api/imoveis`, {
       timeout: 30000
     });
@@ -65,9 +65,13 @@ async function getAllImoveisFromAPI() {
     }
     
     const data = response.data;
-    const imoveis = data.imoveis || data || [];
+    const imoveis = data.data?.imoveis || data.imoveis || data || [];
     
     console.log(`📋 ${imoveis.length} imóveis encontrados na API`);
+    console.log(`🔍 DEBUG - Estrutura da resposta:`, Object.keys(data));
+    if (data.data) {
+      console.log(`🔍 DEBUG - Estrutura de data:`, Object.keys(data.data));
+    }
     
     // Mapear cada imóvel para o formato esperado
     return imoveis.map(imovel => {
@@ -102,7 +106,8 @@ async function getAllImoveisFromAPI() {
     });
     
   } catch (error) {
-    console.log(`❌ Erro ao buscar imóveis da API: ${error.message}`);
+    console.log(`❌ [EASYPANEL-LOG] Erro ao buscar imóveis da API: ${error.message}`);
+    console.log(`❌ [EASYPANEL-LOG] Stack trace: ${error.stack}`);
     return [];
   }
 }
@@ -110,9 +115,10 @@ async function getAllImoveisFromAPI() {
 async function uploadFileToStrapi(filePathOrUrl, filename) {
   try {
     // Primeiro, verificar se o arquivo já existe no Strapi
+    console.log(`   🔍 [EASYPANEL-LOG] Verificando se arquivo ${filename} já existe no Strapi...`);
     const existingFileId = await checkFileExistsInStrapi(filename);
     if (existingFileId) {
-      console.log(`   ♻️ Arquivo ${filename} já existe no Strapi (ID: ${existingFileId})`);
+      console.log(`   ♻️ [EASYPANEL-LOG] Arquivo ${filename} já existe no Strapi (ID: ${existingFileId})`);
       return existingFileId;
     }
 
@@ -125,34 +131,43 @@ async function uploadFileToStrapi(filePathOrUrl, filename) {
       const fullUrl = filePathOrUrl.startsWith('/') ? 
         `https://coopcorretores.com.br${filePathOrUrl}` : filePathOrUrl;
       
-      console.log(`   🌐 Fazendo stream da URL: ${fullUrl}`);
-      const response = await axios({
-        method: 'GET',
-        url: fullUrl,
-        responseType: 'stream',
-        timeout: 60000
-      });
-      
-      fileStream = response.data;
-      fileSize = response.headers['content-length'];
+      console.log(`   🌐 [EASYPANEL-LOG] Fazendo stream da URL: ${fullUrl}`);
+      try {
+        const response = await axios({
+          method: 'GET',
+          url: fullUrl,
+          responseType: 'stream',
+          timeout: 60000
+        });
+        console.log(`   ✅ [EASYPANEL-LOG] Stream obtido com sucesso, status: ${response.status}`);
+        fileStream = response.data;
+        fileSize = response.headers['content-length'];
+      } catch (streamError) {
+        console.log(`   ❌ [EASYPANEL-LOG] Erro ao fazer stream da URL: ${streamError.message}`);
+        console.log(`   ❌ [EASYPANEL-LOG] Stack trace stream: ${streamError.stack}`);
+        return null;
+      }
+
     } else {
       // É um caminho local
       if (!fs.existsSync(filePathOrUrl)) {
-        console.log(`   ❌ Arquivo não encontrado: ${filePathOrUrl}`);
+        console.log(`   ❌ [EASYPANEL-LOG] Arquivo não encontrado: ${filePathOrUrl}`);
         return null;
       }
+      console.log(`   📁 [EASYPANEL-LOG] Lendo arquivo local: ${filePathOrUrl}`);
       fileStream = fs.createReadStream(filePathOrUrl);
       const stats = fs.statSync(filePathOrUrl);
       fileSize = stats.size;
     }
 
-    console.log(`   📁 Preparando upload: ${filename} (${fileSize ? (fileSize / 1024 / 1024).toFixed(2) + ' MB' : 'tamanho desconhecido'})`);
+    console.log(`   📁 [EASYPANEL-LOG] Preparando upload: ${filename} (${fileSize ? (fileSize / 1024 / 1024).toFixed(2) + ' MB' : 'tamanho desconhecido'})`);
 
     // Preparar FormData
     const form = new FormData();
     form.append('files', fileStream, filename);
 
-    console.log(`   📤 Enviando ${filename}...`);
+    console.log(`   📤 [EASYPANEL-LOG] Enviando ${filename}...`);
+    console.log(`   🔗 [EASYPANEL-LOG] URL de upload: ${STRAPI_URL}/upload`);
 
     const response = await axios.post(`${STRAPI_URL}/upload`, form, {
       headers: {
@@ -165,17 +180,18 @@ async function uploadFileToStrapi(filePathOrUrl, filename) {
     });
 
     // Log da resposta para debug
-    console.log(`   📊 Status da resposta: ${response.status}`);
-    console.log(`   📊 Content-Type: ${response.headers['content-type']}`);
+    console.log(`   📊 [EASYPANEL-LOG] Status da resposta: ${response.status}`);
+    console.log(`   📊 [EASYPANEL-LOG] Content-Type: ${response.headers['content-type']}`);
     
     // Verificar se a resposta é JSON
     if (typeof response.data === 'string') {
-      console.log(`   ⚠️ Resposta é string, não JSON: ${response.data.substring(0, 200)}`);
+      console.log(`   ⚠️ [EASYPANEL-LOG] Resposta é string, não JSON: ${response.data.substring(0, 200)}`);
       try {
         const parsedData = JSON.parse(response.data);
         response.data = parsedData;
       } catch (parseError) {
-        console.log(`   ❌ Erro ao processar resposta JSON: ${parseError.message}`);
+        console.log(`   ❌ [EASYPANEL-LOG] Erro ao processar resposta JSON: ${parseError.message}`);
+        console.log(`   ❌ [EASYPANEL-LOG] Stack trace parse: ${parseError.stack}`);
         return null;
       }
     }
@@ -183,43 +199,44 @@ async function uploadFileToStrapi(filePathOrUrl, filename) {
     // Processar resposta (igual ao upload-sem-token.js)
     if (response.data && response.data[0]) {
       const file = response.data[0];
-      console.log(`   ✅ Upload realizado: ${filename} (ID: ${file.id})`);
+      console.log(`   ✅ [EASYPANEL-LOG] Upload realizado: ${filename} (ID: ${file.id})`);
       return file.id;
     } else {
-      console.log(`   ❌ Resposta inválida do servidor`);
-      console.log(`   📄 Dados recebidos: ${JSON.stringify(response.data)}`);
+      console.log(`   ❌ [EASYPANEL-LOG] Resposta inválida do servidor`);
+      console.log(`   📄 [EASYPANEL-LOG] Dados recebidos: ${JSON.stringify(response.data)}`);
       return null;
     }
 
   } catch (error) {
-    console.log(`   ❌ Erro ao fazer upload de ${filename}:`);
+    console.log(`   ❌ [EASYPANEL-LOG] Erro ao fazer upload de ${filename}:`);
+    console.log(`   ❌ [EASYPANEL-LOG] Stack trace upload: ${error.stack}`);
     
     if (error.response) {
-      console.log(`   📊 Status: ${error.response.status}`);
-      console.log(`   📊 Headers: ${JSON.stringify(error.response.headers)}`);
+      console.log(`   📊 [EASYPANEL-LOG] Status: ${error.response.status}`);
+      console.log(`   📊 [EASYPANEL-LOG] Headers: ${JSON.stringify(error.response.headers)}`);
       
       // Log da resposta bruta para debug
       if (typeof error.response.data === 'string') {
-        console.log(`   📄 Resposta bruta (primeiros 500 chars): ${error.response.data.substring(0, 500)}`);
+        console.log(`   📄 [EASYPANEL-LOG] Resposta bruta (primeiros 500 chars): ${error.response.data.substring(0, 500)}`);
       } else {
-        console.log(`   📄 Erro: ${error.response.data?.error || error.response.data?.message || JSON.stringify(error.response.data)}`);
+        console.log(`   📄 [EASYPANEL-LOG] Erro: ${error.response.data?.error || error.response.data?.message || JSON.stringify(error.response.data)}`);
       }
       
       if (error.response.status === 401 || error.response.status === 403) {
-        console.log(`   💡 O upload parece exigir autenticação.`);
+        console.log(`   💡 [EASYPANEL-LOG] O upload parece exigir autenticação.`);
       } else if (error.response.status === 413) {
-        console.log(`   💡 Arquivo muito grande. Verifique o limite de upload.`);
+        console.log(`   💡 [EASYPANEL-LOG] Arquivo muito grande. Verifique o limite de upload.`);
       } else if (error.response.status === 404) {
-        console.log(`   💡 Endpoint de upload não encontrado. Verificar URL.`);
+        console.log(`   💡 [EASYPANEL-LOG] Endpoint de upload não encontrado. Verificar URL.`);
       } else if (error.response.status === 405) {
-        console.log(`   💡 Método não permitido. Verificar endpoint.`);
+        console.log(`   💡 [EASYPANEL-LOG] Método não permitido. Verificar endpoint.`);
       }
     } else if (error.code === 'ENOTFOUND') {
-      console.log(`   🔍 Domínio não encontrado`);
+      console.log(`   🔍 [EASYPANEL-LOG] Domínio não encontrado`);
     } else if (error.code === 'ECONNREFUSED') {
-      console.log(`   🔌 Conexão recusada`);
+      console.log(`   🔌 [EASYPANEL-LOG] Conexão recusada`);
     } else {
-      console.log(`   ❗ Erro: ${error.message}`);
+      console.log(`   ❗ [EASYPANEL-LOG] Erro: ${error.message}`);
     }
     
     return null;
@@ -620,8 +637,8 @@ async function syncSingleImovelCorrigido(imovelData) {
 // Função para enviar/atualizar imóvel no Strapi (versão corrigida)
 async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
     try {
-      console.log(`   📤 Enviando imóvel "${imovelData.titulo}" para o Strapi...`);
-      console.log(`   📋 Dados do imóvel:`);
+      console.log(`   📤 [EASYPANEL-LOG] Enviando imóvel "${imovelData.titulo}" para o Strapi...`);
+      console.log(`   📋 [EASYPANEL-LOG] Dados do imóvel:`);
       console.log(`      - Título: ${imovelData.titulo}`);
       console.log(`      - Tipo: ${imovelData.tipo}`);
       console.log(`      - Preço: R$ ${imovelData.preco}`);
@@ -631,23 +648,28 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
       // Processar fotos
       const uploadedFotos = [];
       if (imovelData.fotos && imovelData.fotos.length > 0) {
-        console.log(`   📸 Processando ${imovelData.fotos.length} fotos...`);
+        console.log(`   📸 [EASYPANEL-LOG] Processando ${imovelData.fotos.length} fotos...`);
         for (let i = 0; i < imovelData.fotos.length; i++) {
           const foto = imovelData.fotos[i];
-          console.log(`   📋 Foto ${i+1}: ${foto}`);
+          console.log(`   📋 [EASYPANEL-LOG] Foto ${i+1}: ${foto}`);
           const localPath = getFilePathFromUrl(foto);
-          console.log(`   📁 Caminho local: ${localPath}`);
+          console.log(`   📁 [EASYPANEL-LOG] Caminho local: ${localPath}`);
           if (localPath) {
-            console.log(`   📤 Iniciando upload da foto ${i+1}: ${path.basename(localPath)}`);
-            const fileId = await uploadFileToStrapi(localPath, path.basename(localPath));
-            if (fileId) {
-              uploadedFotos.push(fileId);
-              console.log(`   ✅ Foto ${i+1} enviada com sucesso (ID: ${fileId})`);
-            } else {
-              console.log(`   ❌ Falha no upload da foto ${i+1}`);
+            console.log(`   📤 [EASYPANEL-LOG] Iniciando upload da foto ${i+1}: ${path.basename(localPath)}`);
+            try {
+              const fileId = await uploadFileToStrapi(localPath, path.basename(localPath));
+              if (fileId) {
+                uploadedFotos.push(fileId);
+                console.log(`   ✅ [EASYPANEL-LOG] Foto ${i+1} enviada com sucesso (ID: ${fileId})`);
+              } else {
+                console.log(`   ❌ [EASYPANEL-LOG] Falha no upload da foto ${i+1}`);
+              }
+            } catch (error) {
+              console.log(`   ❌ [EASYPANEL-LOG] Erro no upload da foto ${i+1}: ${error.message}`);
+              console.log(`   ❌ [EASYPANEL-LOG] Stack trace foto: ${error.stack}`);
             }
           } else {
-            console.log(`   ⚠️  Caminho local não encontrado para: ${foto}`);
+            console.log(`   ⚠️ [EASYPANEL-LOG] Caminho local não encontrado para: ${foto}`);
           }
         }
       }
@@ -655,23 +677,28 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
       // Processar vídeos
       const uploadedVideos = [];
       if (imovelData.videos && imovelData.videos.length > 0) {
-        console.log(`   🎥 Processando ${imovelData.videos.length} vídeos...`);
+        console.log(`   🎥 [EASYPANEL-LOG] Processando ${imovelData.videos.length} vídeos...`);
         for (let i = 0; i < imovelData.videos.length; i++) {
           const video = imovelData.videos[i];
-          console.log(`   📋 Vídeo ${i+1}: ${video}`);
+          console.log(`   📋 [EASYPANEL-LOG] Vídeo ${i+1}: ${video}`);
           const localPath = getFilePathFromUrl(video);
-          console.log(`   📁 Caminho local: ${localPath}`);
+          console.log(`   📁 [EASYPANEL-LOG] Caminho local: ${localPath}`);
           if (localPath) {
-            console.log(`   📤 Iniciando upload do vídeo ${i+1}: ${path.basename(localPath)}`);
-            const fileId = await uploadFileToStrapi(localPath, path.basename(localPath));
-            if (fileId) {
-              uploadedVideos.push(fileId);
-              console.log(`   ✅ Vídeo ${i+1} enviado com sucesso (ID: ${fileId})`);
-            } else {
-              console.log(`   ❌ Falha no upload do vídeo ${i+1}`);
+            console.log(`   📤 [EASYPANEL-LOG] Iniciando upload do vídeo ${i+1}: ${path.basename(localPath)}`);
+            try {
+              const fileId = await uploadFileToStrapi(localPath, path.basename(localPath));
+              if (fileId) {
+                uploadedVideos.push(fileId);
+                console.log(`   ✅ [EASYPANEL-LOG] Vídeo ${i+1} enviado com sucesso (ID: ${fileId})`);
+              } else {
+                console.log(`   ❌ [EASYPANEL-LOG] Falha no upload do vídeo ${i+1}`);
+              }
+            } catch (error) {
+              console.log(`   ❌ [EASYPANEL-LOG] Erro no upload do vídeo ${i+1}: ${error.message}`);
+              console.log(`   ❌ [EASYPANEL-LOG] Stack trace vídeo: ${error.stack}`);
             }
           } else {
-            console.log(`   ⚠️  Caminho local não encontrado para: ${video}`);
+            console.log(`   ⚠️ [EASYPANEL-LOG] Caminho local não encontrado para: ${video}`);
           }
         }
       }
@@ -821,11 +848,10 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
 
 
 
-// Função principal
 // Função para buscar imóvel específico via API
 async function getImovelFromAPI(imovelId) {
   try {
-    const API_URL = process.env.NEXTAUTH_URL || 'http://127.0.0.1:4000';
+    const API_URL = process.env.NEXTAUTH_URL || 'http://localhost:4000';
     console.log(`🔍 Buscando imóvel ID ${imovelId} na API pública: ${API_URL}/api/imoveis/${imovelId}`);
     const response = await axios.get(`${API_URL}/api/imoveis/${imovelId}`, {
       timeout: 10000
@@ -897,38 +923,35 @@ async function getImovelFromAPI(imovelId) {
 }
 
 async function main() {
-  console.log('🚀 Iniciando sincronização com Strapi v3.8');
+  console.log('🚀 [EASYPANEL-LOG] Iniciando sincronização com Strapi v3.8');
+  console.log(`🕐 [EASYPANEL-LOG] Timestamp: ${new Date().toISOString()}`);
   
   // Verificar se foi passado um ID específico de imóvel
   const args = process.argv.slice(2);
   const imovelIdArg = args.find(arg => arg.startsWith('--imovel-id='));
   const imovelId = imovelIdArg ? imovelIdArg.split('=')[1] : null;
   
-  if (!await testStrapiConnection()) {
-    console.log('❌ Conexão com Strapi falhou. Verifique URL e token.');
-    process.exit(1);
-  }
-
-  console.log('🚀 Iniciando sincronização de imóveis...');
-  console.log(`🔗 URL Strapi: ${STRAPI_URL}`);
+  console.log(`🔗 [EASYPANEL-LOG] URL Strapi: ${STRAPI_URL}`);
   
   if (imovelId) {
-    console.log(`🎯 Sincronizando imóvel específico: ID ${imovelId}`);
+    console.log(`🎯 [EASYPANEL-LOG] Sincronizando imóvel específico: ID ${imovelId}`);
+  } else {
+    console.log(`🔄 [EASYPANEL-LOG] Sincronizando todos os imóveis`);
   }
   
   // Verificar se as variáveis necessárias estão configuradas
   if (!STRAPI_URL || STRAPI_URL === 'https://whatsapp-strapi.xjueib.easypanel.host') {
-    console.log('⚠️  Atenção: Usando URL padrão do Strapi');
+    console.log('⚠️ [EASYPANEL-LOG] Atenção: Usando URL padrão do Strapi');
   }
   
   // Testar conexão
   const conectado = await testStrapiConnection();
   if (!conectado) {
-    console.log('❌ Não foi possível conectar ao Strapi. Verifique a URL e o token.');
-    return;
+    console.log('❌ [EASYPANEL-LOG] Não foi possível conectar ao Strapi. Verifique a URL e o token.');
+    process.exit(1);
   }
   
-  console.log('✅ Conexão com Strapi estabelecida!');
+  console.log('✅ [EASYPANEL-LOG] Conexão com Strapi estabelecida!');
   
   let imoveis = [];
   
@@ -973,16 +996,16 @@ async function main() {
     }
   } else {
     // Buscar todos os imóveis da API
-    console.log('🔄 Sincronizando todos os imóveis da base de dados...');
+    console.log('🔄 [EASYPANEL-LOG] Sincronizando todos os imóveis da base de dados...');
     const todosImoveis = await getAllImoveisFromAPI();
     
     if (todosImoveis.length === 0) {
-      console.log('❌ Nenhum imóvel encontrado na API');
+      console.log('❌ [EASYPANEL-LOG] Nenhum imóvel encontrado na API');
       return;
     }
     
     imoveis = todosImoveis;
-    console.log(`✅ ${imoveis.length} imóveis carregados da API!`);
+    console.log(`✅ [EASYPANEL-LOG] ${imoveis.length} imóveis carregados da API!`);
   }
   
   if (imoveis.length === 0) {
@@ -990,31 +1013,89 @@ async function main() {
     return;
   }
   
-  console.log(`📊 Total de imóveis para processar: ${imoveis.length}`);
+  console.log(`📊 [EASYPANEL-LOG] Total de imóveis para processar: ${imoveis.length}`);
   
   const resultados = [];
-  for (const imovel of imoveis) {
-    const resultado = await enviarImovelParaStrapiCorrigido(imovel, imovel.id);
-    resultados.push({
-      status: resultado ? 'processado' : 'erro',
-      titulo: imovel.titulo,
-      fotosUpload: imovel.fotos ? imovel.fotos.length : 0,
-      videosUpload: imovel.videos ? imovel.videos.length : 0
-    });
+  let sucessos = 0;
+  let erros = 0;
+  
+  for (let i = 0; i < imoveis.length; i++) {
+    const imovel = imoveis[i];
+    console.log(`\n🔄 [EASYPANEL-LOG] Processando imóvel ${i + 1}/${imoveis.length} - ID: ${imovel.id}`);
+    
+    try {
+      console.log(`📋 [EASYPANEL-LOG] Dados do imóvel:`);
+      console.log(`   - Título: ${imovel.titulo || 'Sem título'}`);
+      console.log(`   - Tipo: ${imovel.tipo || 'N/A'}`);
+      console.log(`   - Preço: R$ ${imovel.preco || '0.00'}`);
+      console.log(`   - Cidade: ${imovel.cidade || 'N/A'}`);
+      console.log(`   - Status: ${imovel.status || 'N/A'}`);
+      console.log(`   - Fotos: ${imovel.fotos ? imovel.fotos.length : 0}`);
+      console.log(`   - Vídeos: ${imovel.videos ? imovel.videos.length : 0}`);
+      
+      const resultado = await enviarImovelParaStrapiCorrigido(imovel, imovel.id);
+      
+      if (resultado) {
+        sucessos++;
+        console.log(`✅ [EASYPANEL-LOG] Sucesso: Imóvel ${imovel.id} sincronizado (${sucessos}/${imoveis.length})`);
+        resultados.push({
+          status: 'processado',
+          titulo: imovel.titulo,
+          fotosUpload: imovel.fotos ? imovel.fotos.length : 0,
+          videosUpload: imovel.videos ? imovel.videos.length : 0
+        });
+      } else {
+        erros++;
+        console.log(`❌ [EASYPANEL-LOG] Erro: Falha ao sincronizar imóvel ${imovel.id} (${erros} erros)`);
+        resultados.push({
+          status: 'erro',
+          titulo: imovel.titulo,
+          fotosUpload: 0,
+          videosUpload: 0
+        });
+      }
+      
+    } catch (error) {
+      erros++;
+      console.log(`❌ [EASYPANEL-LOG] Erro ao processar imóvel ${imovel.id}: ${error.message}`);
+      console.log(`❌ [EASYPANEL-LOG] Stack trace: ${error.stack}`);
+      resultados.push({
+        status: 'erro',
+        titulo: imovel.titulo || 'Sem título',
+        fotosUpload: 0,
+        videosUpload: 0,
+        error: error.message
+      });
+    }
+    
+    // Pequena pausa entre processamentos para evitar sobrecarga
+    if (i < imoveis.length - 1) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
   }
   
-  console.log('\n✅ Sincronização concluída!');
-  console.log(`📊 Processados: ${resultados.filter(r => r.status === 'processado').length}`);
-  console.log(`❌ Erros: ${resultados.filter(r => r.status === 'erro').length}`);
+  console.log('\n✅ [EASYPANEL-LOG] Sincronização concluída!');
+  console.log(`📊 [EASYPANEL-LOG] Processados com sucesso: ${sucessos}`);
+  console.log(`❌ [EASYPANEL-LOG] Erros encontrados: ${erros}`);
+  console.log(`📊 [EASYPANEL-LOG] Total processado: ${resultados.length}`);
+  
+  if (erros > 0) {
+    console.log('\n❌ [EASYPANEL-LOG] Imóveis com erro:');
+    resultados.filter(r => r.status === 'erro').forEach(r => {
+      console.log(`   - ${r.titulo}: ${r.error || 'Erro desconhecido'}`);
+    });
+  }
   
   // Mostrar resumo detalhado
   const comUpload = resultados.filter(r => r.fotosUpload > 0 || r.videosUpload > 0);
   if (comUpload.length > 0) {
-    console.log('\n📸 Uploads realizados:');
+    console.log('\n📸 [EASYPANEL-LOG] Uploads realizados:');
     comUpload.forEach(r => {
       console.log(`   ${r.titulo}: ${r.fotosUpload} fotos, ${r.videosUpload} vídeos`);
     });
   }
+  
+  console.log(`\n🏁 [EASYPANEL-LOG] Processo finalizado - ${new Date().toISOString()}`);
 
 }
 
