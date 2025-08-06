@@ -283,12 +283,16 @@ async function syncSingleImovel(imovel) {
         cidade: imovel.cidade,
         tipologia: (() => {
           const caracteristicas = [];
-          if (imovel.area_construida) caracteristicas.push(`area_construida ${String(imovel.area_construida)}`);
-          if (imovel.area_total) caracteristicas.push(`area_total ${String(imovel.area_total)}`);
-          if (imovel.banheiros) caracteristicas.push(`banheiros ${String(imovel.banheiros)}`);
-          if (imovel.quartos) caracteristicas.push(`quartos ${String(imovel.quartos)}`);
-          if (imovel.vagas_garagem) caracteristicas.push(`vagas_garagem ${String(imovel.vagas_garagem)}`);
-          return caracteristicas.join(', ');
+          console.log(`🔍 DEBUG Tipologia - area_construida: ${imovel.area_construida} (tipo: ${typeof imovel.area_construida})`);
+          console.log(`🔍 DEBUG Tipologia - area_total: ${imovel.area_total} (tipo: ${typeof imovel.area_total})`);
+          if (imovel.area_construida && imovel.area_construida !== 0) caracteristicas.push(`area_construida ${String(imovel.area_construida)}`);
+          if (imovel.area_total && imovel.area_total !== 0) caracteristicas.push(`area_total ${String(imovel.area_total)}`);
+          if (imovel.banheiros && imovel.banheiros !== 0) caracteristicas.push(`banheiros ${String(imovel.banheiros)}`);
+          if (imovel.quartos && imovel.quartos !== 0) caracteristicas.push(`quartos ${String(imovel.quartos)}`);
+          if (imovel.vagas_garagem && imovel.vagas_garagem !== 0) caracteristicas.push(`vagas_garagem ${String(imovel.vagas_garagem)}`);
+          const resultado = caracteristicas.join(', ');
+          console.log(`🔍 DEBUG Tipologia final: ${resultado}`);
+          return resultado;
         })(),
         images: uploadedFotos
       }
@@ -676,12 +680,16 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
                 caracteristicas: imovelData.caracteristicas || '',
                 tipologia: (() => {
                   const caracteristicas = [];
-                  if (imovelData.area_construida) caracteristicas.push(`area_construida ${String(imovelData.area_construida)}`);
-                  if (imovelData.area_total) caracteristicas.push(`area_total ${String(imovelData.area_total)}`);
-                  if (imovelData.banheiros) caracteristicas.push(`banheiros ${String(imovelData.banheiros)}`);
-                  if (imovelData.quartos) caracteristicas.push(`quartos ${String(imovelData.quartos)}`);
-                  if (imovelData.vagas_garagem) caracteristicas.push(`vagas_garagem ${String(imovelData.vagas_garagem)}`);
-                  return caracteristicas.join(', ');
+                  console.log(`🔍 DEBUG Tipologia Envio - area_construida: ${imovelData.area_construida} (tipo: ${typeof imovelData.area_construida})`);
+                  console.log(`🔍 DEBUG Tipologia Envio - area_total: ${imovelData.area_total} (tipo: ${typeof imovelData.area_total})`);
+                  if (imovelData.area_construida && imovelData.area_construida !== 0) caracteristicas.push(`area_construida ${String(imovelData.area_construida)}`);
+                  if (imovelData.area_total && imovelData.area_total !== 0) caracteristicas.push(`area_total ${String(imovelData.area_total)}`);
+                  if (imovelData.banheiros && imovelData.banheiros !== 0) caracteristicas.push(`banheiros ${String(imovelData.banheiros)}`);
+                  if (imovelData.quartos && imovelData.quartos !== 0) caracteristicas.push(`quartos ${String(imovelData.quartos)}`);
+                  if (imovelData.vagas_garagem && imovelData.vagas_garagem !== 0) caracteristicas.push(`vagas_garagem ${String(imovelData.vagas_garagem)}`);
+                  const resultado = caracteristicas.join(', ');
+                  console.log(`🔍 DEBUG Tipologia Envio final: ${resultado}`);
+                  return resultado;
                 })(),
                 codigo: imovelData.codigo || imovelData.id,
                 url: `https://coopcorretores.com.br/imoveis/${originalId || imovelData.id}`,
