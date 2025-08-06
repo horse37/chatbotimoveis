@@ -796,6 +796,10 @@ async function getImovelFromAPI(imovelId) {
     console.log(`   - Vagas: ${imovel.vagas_garagem}`);
     console.log(`   - Endereço: ${imovel.endereco}`);
     console.log(`   - Bairro: ${imovel.bairro}`);
+    console.log(`🔍 DEBUG - Todos os campos do objeto imovel:`, Object.keys(imovel));
+    console.log(`🔍 DEBUG - Valores específicos:`);
+    console.log(`   - imovel.area_construida: ${imovel.area_construida}`);
+    console.log(`   - imovel.bairro: ${imovel.bairro}`);
     console.log(`   - Cidade: ${imovel.cidade}`);
     console.log(`   - Estado: ${imovel.estado}`);
     console.log(`   - CEP: ${imovel.cep}`);
