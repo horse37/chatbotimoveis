@@ -602,7 +602,7 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
                 caracteristicas: imovelData.caracteristicas || '',
                 tipologia: imovelData.tipologia || '',
                 codigo: imovelData.codigo || imovelData.id,
-                url: `https://chatbotimoveis.vercel.app/imovel/${originalId || imovelData.id}`,
+                url: `https://coopcorretores.com.br/imoveis/${originalId || imovelData.id}`,
                 id_integracao: originalId || imovelData.id,
                 images: uploadedFotos,
                 videos: uploadedVideos
