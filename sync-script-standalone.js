@@ -585,14 +585,17 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
           res.on('end', () => {
             try {
               const checkResponse = JSON.parse(data);
+              console.log(`📊 Resposta da verificação:`, JSON.stringify(checkResponse, null, 2));
               
-              const method = (checkResponse && checkResponse.length > 0) ? 'PUT' : 'POST';
-              const path = (checkResponse && checkResponse.length > 0) 
-                ? `/imoveis/${checkResponse[0].id}` 
+              // Strapi retorna um objeto com propriedade 'data' contendo os resultados
+              const existingImoveis = checkResponse.data || checkResponse;
+              const method = (existingImoveis && existingImoveis.length > 0) ? 'PUT' : 'POST';
+              const path = (existingImoveis && existingImoveis.length > 0) 
+                ? `/imoveis/${existingImoveis[0].id}` 
                  : '/imoveis';
               
               if (method === 'PUT') {
-                console.log(`   🔄 Atualizando imóvel existente (ID: ${checkResponse[0].id})`);
+                console.log(`   🔄 Atualizando imóvel existente (ID: ${existingImoveis[0].id})`);
               } else {
                 console.log(`   ➕ Criando novo imóvel`);
               }
