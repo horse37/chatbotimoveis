@@ -438,6 +438,7 @@ async function syncSingleImovelCorrigido(imovelData) {
       // Preparar dados do imóvel para envio ao Strapi
       const imovelParaStrapi = {
         titulo: imovelData.titulo || 'Imóvel sem título',
+        title: imovelData.titulo || 'Imóvel sem título',
         descricao: imovelData.descricao || '',
         preco: parseFloat(imovelData.preco) || 0,
         tipo: imovelData.tipo || 'casa',
@@ -454,7 +455,9 @@ async function syncSingleImovelCorrigido(imovelData) {
         videos: uploadedVideos,
         destaque: Boolean(imovelData.destaque) || false,
         slug: imovelData.slug || (imovelData.titulo || '').toLowerCase().replace(/\s+/g, '-'),
-        codigo: imovelData.codigo || imovelData.id?.toString() || 'sem-codigo'
+        codigo: imovelData.codigo || imovelData.id?.toString() || 'sem-codigo',
+        url: `https://coopcorretores.com.br/imoveis/${imovelData.id}`,
+        id_integracao: imovelData.id
       };
 
       // Enviar imóvel para o Strapi
@@ -578,7 +581,7 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
 
               // Preparar dados com uploads
               const imovelParaStrapi = {
-                titulo: imovelData.titulo || 'Sem título',
+                title: imovelData.titulo || 'Sem título',
                 description: imovelData.descricao || 'Sem descrição',
                 price: parseFloat(imovelData.preco) || 0,
                 tipo_contrato: imovelData.finalidade || imovelData.tipo_contrato || 'venda',
@@ -599,6 +602,8 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
                 caracteristicas: imovelData.caracteristicas || '',
                 tipologia: imovelData.tipologia || '',
                 codigo: imovelData.codigo || imovelData.id,
+                url: `https://chatbotimoveis.vercel.app/imovel/${originalId || imovelData.id}`,
+                id_integracao: originalId || imovelData.id,
                 images: uploadedFotos,
                 videos: uploadedVideos
               };
@@ -668,58 +673,7 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
     }
   }
 
-  // Função para simular dados de imóveis (exemplo)
-  function getImoveisExemplo() {
-    return [
-      {
-        id: 1,
-        titulo: "Casa Moderna 3 Quartos",
-        descricao: "Casa moderna com 3 quartos, 2 banheiros, garagem para 2 carros",
-        preco: 450000,
-        tipo: "casa",
-        status: "disponivel",
-        endereco: "Rua das Flores, 123",
-        cidade: "São Paulo",
-        estado: "SP",
-        bairro: "Jardim Paulista",
-        quartos: 3,
-        banheiros: 2,
-        vagas: 2,
-        area: 180,
-        destaque: true,
-        codigo: "CASA001",
-        fotos: [
-          "/uploads/imoveis/0bcd5d82-7841-48f2-8f22-1fe1f5c135fd.jpg",
-          "/uploads/imoveis/1ecfe490-3f51-45fd-96c9-eab96872fcd2.jpg"
-        ],
-        videos: []
-      },
-      {
-        id: 2,
-        titulo: "Apartamento Vista Mar",
-        descricao: "Apartamento com vista para o mar, 2 quartos, varanda gourmet",
-        preco: 320000,
-        tipo: "apartamento",
-        status: "disponivel",
-        endereco: "Av. Beira Mar, 456",
-        cidade: "Rio de Janeiro",
-        estado: "RJ",
-        bairro: "Copacabana",
-        quartos: 2,
-        banheiros: 1,
-        vagas: 1,
-        area: 85,
-        destaque: false,
-        codigo: "APTO001",
-        fotos: [
-          "/uploads/imoveis/20448267-d369-4b2d-90a4-1b93b11e27a2.jpg"
-        ],
-        videos: [
-          "/uploads/imoveis/videos/2acc98f7-9d97-421a-8122-3c58418d549e.mp4"
-        ]
-      }
-    ];
-  }
+
 
 // Função principal
 // Função para buscar imóvel específico via API
@@ -868,8 +822,8 @@ async function main() {
       }];
     }
   } else {
-    // Buscar todos os imóveis (use a função de exemplo)
-    imoveis = getImoveisExemplo();
+    console.log('⚠️  Nenhum ID de imóvel fornecido. Use: node sync-script-standalone.js <imovelId>');
+    return;
   }
   
   if (imoveis.length === 0) {
