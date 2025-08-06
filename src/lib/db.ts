@@ -13,11 +13,6 @@ const pool = new Pool({
   min: 5,
   idleTimeoutMillis: 300000, // 5 minutos
   connectionTimeoutMillis: 60000, // 1 minuto
-  acquireTimeoutMillis: 60000,
-  createTimeoutMillis: 30000,
-  destroyTimeoutMillis: 5000,
-  reapIntervalMillis: 1000,
-  createRetryIntervalMillis: 200,
 })
 
 // Event listeners para o pool
@@ -81,6 +76,9 @@ export async function query(text: string, params?: any[], retries = 3): Promise<
       }
     }
   }
+  
+  // Se chegou aqui, todos os retries falharam
+  throw new Error('All database connection retries failed')
 }
 
 export default pool
