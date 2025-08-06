@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Plus, Search, Filter, Edit, Trash2, Eye, RefreshCw } from 'lucide-react'
 import AdminLayout from '@/components/admin/AdminLayout'
+import SyncModal from '@/components/admin/SyncModal'
 import toast from 'react-hot-toast'
 import { fetchAuthApi } from '@/lib/api'
 import { formatImovelId } from '@/lib/utils'
@@ -46,6 +47,8 @@ export default function AdminImoveisPage() {
   const [syncStep, setSyncStep] = useState<number>(0)
   const [totalSteps] = useState<number>(6)
   const [isSyncingIndividual, setIsSyncingIndividual] = useState(false)
+  const [showFullSyncModal, setShowFullSyncModal] = useState(false)
+  const [fullSyncProgress, setFullSyncProgress] = useState({ current: 0, total: 0, currentImovel: '', successCount: 0, errorCount: 0, errors: [] as string[] })
 
   const fetchImoveis = useCallback(async () => {
     try {
@@ -145,16 +148,50 @@ export default function AdminImoveisPage() {
 
   const handleSync = async () => {
     setIsSyncing(true)
-    setSyncResult(null)
+    setShowFullSyncModal(true)
+    setFullSyncProgress({ current: 0, total: 0, currentImovel: 'Iniciando...', successCount: 0, errorCount: 0, errors: [] })
     
     try {
       const token = localStorage.getItem('token')
       if (!token) {
         toast.error('Token de autenticação não encontrado')
         setIsSyncing(false)
+        setShowFullSyncModal(false)
         return
       }
 
+      // Primeiro, buscar todos os imóveis para saber o total
+      const imoveisResponse = await fetch('/api/imoveis', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+      
+      if (!imoveisResponse.ok) {
+        throw new Error('Erro ao buscar lista de imóveis')
+      }
+      
+      const imoveisData = await imoveisResponse.json()
+      const totalImoveis = imoveisData.imoveis?.length || 0
+      
+      setFullSyncProgress(prev => ({ ...prev, total: totalImoveis, currentImovel: 'Preparando sincronização...' }))
+      
+      // Simular progresso durante a sincronização
+      const progressInterval = setInterval(() => {
+        setFullSyncProgress(prev => {
+          if (prev.current < prev.total) {
+            const newCurrent = Math.min(prev.current + 1, prev.total)
+            const currentImovel = imoveisData.imoveis?.[newCurrent - 1]?.titulo || `Imóvel ${newCurrent}`
+            return {
+              ...prev,
+              current: newCurrent,
+              currentImovel: `Processando: ${currentImovel}`
+            }
+          }
+          return prev
+        })
+      }, 2000) // Atualizar a cada 2 segundos
+      
       const response = await fetch('/api/sync-imoveis', {
         method: 'POST',
         headers: {
@@ -163,24 +200,44 @@ export default function AdminImoveisPage() {
         },
       })
       
+      clearInterval(progressInterval)
+      
       const result = await response.json()
       
       if (response.ok) {
+        setFullSyncProgress(prev => ({
+          ...prev,
+          current: totalImoveis,
+          currentImovel: 'Concluído!',
+          successCount: result.successCount || 0,
+          errorCount: result.errorCount || 0,
+          errors: result.errors || []
+        }))
+        
         toast.success(`Sincronização concluída: ${result.successCount} imóveis atualizados`)
-        setSyncResult(`Sincronização concluída: ${result.successCount} imóveis atualizados`)
+        
         // Recarregar a lista de imóveis após sincronização
         setTimeout(() => {
           fetchImoveis()
-          setSyncResult(null)
         }, 2000)
       } else {
+        setFullSyncProgress(prev => ({
+          ...prev,
+          currentImovel: 'Erro na sincronização',
+          errorCount: 1,
+          errors: [result.error || 'Erro desconhecido']
+        }))
         toast.error(`Erro na sincronização: ${result.error || 'Erro desconhecido'}`)
-        setSyncResult(`Erro: ${result.error || 'Erro desconhecido'}`)
       }
     } catch (error) {
       console.error('Erro ao conectar com o servidor:', error)
+      setFullSyncProgress(prev => ({
+        ...prev,
+        currentImovel: 'Erro de conexão',
+        errorCount: 1,
+        errors: ['Erro ao conectar com o servidor']
+      }))
       toast.error('Erro ao conectar com o servidor')
-      setSyncResult('Erro ao conectar com o servidor')
     } finally {
       setIsSyncing(false)
     }
@@ -349,7 +406,7 @@ export default function AdminImoveisPage() {
                     <span>Sincronizar Strapi</span>
                   </>
                 )}
-              </button>
+                </button>
             )}
             <Link
               href="/admin/imoveis/cadastrar"
@@ -691,6 +748,14 @@ export default function AdminImoveisPage() {
             </div>
           </div>
         )}
+
+        {/* Modal de Progresso da Sincronização Completa */}
+        <SyncModal
+          isOpen={showFullSyncModal}
+          onClose={() => setShowFullSyncModal(false)}
+          progress={fullSyncProgress}
+          isComplete={!isSyncing && fullSyncProgress.current > 0}
+        />
       </div>
     </AdminLayout>
   )

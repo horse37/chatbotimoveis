@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { exec } from 'child_process'
-import { promisify } from 'util'
+import { spawn } from 'child_process'
 import path from 'path'
 import { requireAuth } from '@/lib/auth'
-
-const execAsync = promisify(exec)
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,58 +17,86 @@ export async function POST(request: NextRequest) {
     }
     
     const projectRoot = process.cwd()
-    const scriptPath = path.join(projectRoot, 'sync-script.js')
+    const scriptPath = path.join(projectRoot, 'sync-script-standalone.js')
     
     console.log('🚀 Iniciando sincronização de imóveis...')
     
-    // Executar o script de sincronização
-    const { stdout, stderr } = await execAsync(`node "${scriptPath}"`, {
-      cwd: projectRoot,
-      env: {
-        ...process.env,
-        NODE_ENV: process.env.NODE_ENV || 'production'
-      }
+    return new Promise((resolve) => {
+      let successCount = 0
+      let errorCount = 0
+      let totalCount = 0
+      const errors: string[] = []
+      
+      // Executar o script de sincronização
+      const child = spawn('node', [scriptPath], {
+        cwd: projectRoot,
+        env: {
+          ...process.env,
+          NODE_ENV: process.env.NODE_ENV || 'production'
+        }
+      })
+      
+      let output = ''
+      
+      child.stdout.on('data', (data) => {
+        output += data.toString()
+      })
+      
+      child.stderr.on('data', (data) => {
+        const errorMsg = data.toString()
+        console.error('Erro no script:', errorMsg)
+        errors.push(errorMsg)
+      })
+      
+      child.on('close', (code) => {
+        // Analisar o resultado
+        const lines = output.split('\n')
+        const successLine = lines.find(line => line.includes('✅ Sucesso:'))
+        const totalLine = lines.find(line => line.includes('📊 Total:'))
+        const errorLine = lines.find(line => line.includes('❌ Erros:'))
+        
+        if (successLine) {
+          const match = successLine.match(/✅ Sucesso: (\d+)/)
+          successCount = match ? parseInt(match[1]) : 0
+        }
+        
+        if (totalLine) {
+          const match = totalLine.match(/📊 Total: (\d+)/)
+          totalCount = match ? parseInt(match[1]) : 0
+        }
+        
+        if (errorLine) {
+          const match = errorLine.match(/❌ Erros: (\d+)/)
+          errorCount = match ? parseInt(match[1]) : 0
+        }
+        
+        console.log(`✅ Sincronização concluída: ${successCount}/${totalCount} imóveis processados`)
+        
+        resolve(NextResponse.json({
+          success: code === 0,
+          successCount,
+          totalCount,
+          errorCount,
+          errors,
+          message: `Sincronização concluída: ${successCount}/${totalCount} imóveis processados`,
+          output
+        }))
+      })
+      
+      child.on('error', (error) => {
+        console.error('Erro ao executar script:', error)
+        resolve(NextResponse.json({
+          success: false,
+          error: error.message || 'Erro ao executar script de sincronização'
+        }, { status: 500 }))
+      })
     })
-    
-    // Analisar o resultado
-    const lines = stdout.split('\n')
-    const successLine = lines.find(line => line.includes('✅ Sucesso:'))
-    const totalLine = lines.find(line => line.includes('📊 Total:'))
-    
-    let successCount = 0
-    let totalCount = 0
-    
-    if (successLine) {
-      const match = successLine.match(/✅ Sucesso: (\d+)/)
-      successCount = match ? parseInt(match[1]) : 0
-    }
-    
-    if (totalLine) {
-      const match = totalLine.match(/📊 Total: (\d+)/)
-      totalCount = match ? parseInt(match[1]) : 0
-    }
-    
-    console.log('✅ Sincronização concluída:', stdout)
-    
-    if (stderr) {
-      console.error('⚠️ Erros durante sincronização:', stderr)
-    }
-    
-    return NextResponse.json({
-      success: true,
-      successCount,
-      totalCount,
-      output: stdout,
-      errors: stderr
-    })
-    
-  } catch (error) {
-    console.error('❌ Erro ao executar sincronização:', error)
-    
+
+  } catch (error: any) {
+    console.error('Erro na sincronização:', error)
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Erro desconhecido',
-      details: error instanceof Error ? error.stack : null
+      error: error.message || 'Erro interno do servidor'
     }, { status: 500 })
   }
 }
