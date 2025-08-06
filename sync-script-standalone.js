@@ -40,8 +40,26 @@ function getContentType(filename) {
 }
 
 // Função para upload de arquivos usando axios (aceita URLs diretas)
+// Função para verificar se um arquivo já existe no Strapi pelo nome
+async function checkFileExistsInStrapi(filename) {
+  try {
+    const response = await axios.get(`${STRAPI_URL}/upload/files?filters[name][$eq]=${encodeURIComponent(filename)}`);
+    return response.data && response.data.length > 0 ? response.data[0].id : null;
+  } catch (error) {
+    console.log(`   ⚠️ Erro ao verificar existência do arquivo ${filename}: ${error.message}`);
+    return null;
+  }
+}
+
 async function uploadFileToStrapi(filePathOrUrl, filename) {
   try {
+    // Primeiro, verificar se o arquivo já existe no Strapi
+    const existingFileId = await checkFileExistsInStrapi(filename);
+    if (existingFileId) {
+      console.log(`   ♻️ Arquivo ${filename} já existe no Strapi (ID: ${existingFileId})`);
+      return existingFileId;
+    }
+
     let fileStream;
     let fileSize;
     
