@@ -782,7 +782,7 @@ async function getImovelFromAPI(imovelId) {
     console.log(`   - Status: ${imovel.status}`);
     console.log(`   - Preço: ${imovel.preco}`);
     console.log(`   - Área Total: ${imovel.area_total}`);
-    console.log(`   - Área Útil: ${imovel.area_util}`);
+    console.log(`   - Área Construída: ${imovel.area_construida}`);
     console.log(`   - Quartos: ${imovel.quartos}`);
     console.log(`   - Banheiros: ${imovel.banheiros}`);
     console.log(`   - Vagas: ${imovel.vagas_garagem}`);
@@ -805,8 +805,7 @@ async function getImovelFromAPI(imovelId) {
       status: imovel.status,
       preco: imovel.preco,
       area_total: imovel.area_total,
-      area_construida: imovel.area_util || imovel.area_construida,
-      area_util: imovel.area_util,
+      area_construida: imovel.area_construida,
       quartos: imovel.quartos,
       banheiros: imovel.banheiros,
       vagas_garagem: imovel.vagas_garagem,
