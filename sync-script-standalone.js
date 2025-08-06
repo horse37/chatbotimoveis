@@ -570,7 +570,7 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
         const checkOptions = {
           hostname: url.hostname,
           port: url.port || 443,
-          path: `/imoveis?filters[id_integracao][$eq]=${encodeURIComponent(originalId || imovelData.id)}`,
+          path: `/imoveis?id_integracao=${encodeURIComponent(originalId || imovelData.id)}`,
           method: 'GET',
           headers: {
             'Content-Type': 'application/json'
