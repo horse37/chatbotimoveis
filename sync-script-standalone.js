@@ -51,6 +51,62 @@ async function checkFileExistsInStrapi(filename) {
   }
 }
 
+async function getAllImoveisFromAPI() {
+  try {
+    const API_URL = process.env.NEXTAUTH_URL || 'http://127.0.0.1:4000';
+    console.log(`🔍 Buscando todos os imóveis na API: ${API_URL}/api/imoveis`);
+    const response = await axios.get(`${API_URL}/api/imoveis`, {
+      timeout: 30000
+    });
+    
+    if (response.status !== 200) {
+      console.log(`❌ Erro ao buscar imóveis da API`);
+      return [];
+    }
+    
+    const data = response.data;
+    const imoveis = data.imoveis || data || [];
+    
+    console.log(`📋 ${imoveis.length} imóveis encontrados na API`);
+    
+    // Mapear cada imóvel para o formato esperado
+    return imoveis.map(imovel => {
+      console.log(`🔍 DEBUG - Mapeando imóvel ID: ${imovel.id}`);
+      console.log(`   - Área Construída: ${imovel.area_construida}`);
+      console.log(`   - Bairro: ${imovel.bairro}`);
+      
+      return {
+        id: imovel.id,
+        codigo: imovel.codigo,
+        titulo: imovel.titulo,
+        descricao: imovel.descricao,
+        tipo: imovel.tipo,
+        status: imovel.status,
+        preco: imovel.preco,
+        area_total: imovel.area_total,
+        area_construida: imovel.area_construida,
+        quartos: imovel.quartos,
+        banheiros: imovel.banheiros,
+        vagas_garagem: imovel.vagas_garagem,
+        endereco: imovel.endereco,
+        bairro: imovel.bairro,
+        cidade: imovel.cidade,
+        estado: imovel.estado,
+        cep: imovel.cep,
+        latitude: imovel.latitude,
+        longitude: imovel.longitude,
+        caracteristicas: imovel.caracteristicas,
+        fotos: imovel.fotos || [],
+        videos: imovel.videos || []
+      };
+    });
+    
+  } catch (error) {
+    console.log(`❌ Erro ao buscar imóveis da API: ${error.message}`);
+    return [];
+  }
+}
+
 async function uploadFileToStrapi(filePathOrUrl, filename) {
   try {
     // Primeiro, verificar se o arquivo já existe no Strapi
@@ -916,8 +972,17 @@ async function main() {
       }];
     }
   } else {
-    console.log('⚠️  Nenhum ID de imóvel fornecido. Use: node sync-script-standalone.js <imovelId>');
-    return;
+    // Buscar todos os imóveis da API
+    console.log('🔄 Sincronizando todos os imóveis da base de dados...');
+    const todosImoveis = await getAllImoveisFromAPI();
+    
+    if (todosImoveis.length === 0) {
+      console.log('❌ Nenhum imóvel encontrado na API');
+      return;
+    }
+    
+    imoveis = todosImoveis;
+    console.log(`✅ ${imoveis.length} imóveis carregados da API!`);
   }
   
   if (imoveis.length === 0) {
