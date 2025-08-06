@@ -7,34 +7,26 @@ interface SyncProgress {
   total: number
   current: number
   currentImovel: string
-  status: 'syncing' | 'completed' | 'error'
-  sucessos: Array<{
-    id: string
-    titulo: string
-    fotosUpload: number
-    videosUpload: number
-  }>
-  erros: Array<{
-    id: string
-    titulo: string
-    erro: string
-  }>
+  successCount: number
+  errorCount: number
+  errors: string[]
 }
 
 interface SyncModalProps {
   isOpen: boolean
   onClose: () => void
   progress: SyncProgress
+  isComplete: boolean
 }
 
-export default function SyncModal({ isOpen, onClose, progress }: SyncModalProps) {
+export default function SyncModal({ isOpen, onClose, progress, isComplete }: SyncModalProps) {
   const [showReport, setShowReport] = useState(false)
 
   useEffect(() => {
-    if (progress.status === 'completed' || progress.status === 'error') {
+    if (isComplete) {
       setShowReport(true)
     }
-  }, [progress.status])
+  }, [isComplete])
 
   if (!isOpen) return null
 
@@ -51,7 +43,7 @@ export default function SyncModal({ isOpen, onClose, progress }: SyncModalProps)
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
-            disabled={progress.status === 'syncing'}
+            disabled={!isComplete && progress.current < progress.total}
           >
             <X className="w-6 h-6" />
           </button>
@@ -89,11 +81,11 @@ export default function SyncModal({ isOpen, onClose, progress }: SyncModalProps)
 
               {/* Status */}
               <div className="text-center">
-                {progress.status === 'syncing' && (
+                {!isComplete && (
                   <p className="text-gray-600">Sincronizando imóveis com o Strapi...</p>
                 )}
-                {progress.status === 'error' && (
-                  <p className="text-red-600">Erro durante a sincronização</p>
+                {isComplete && progress.errorCount > 0 && (
+                  <p className="text-red-600">Sincronização concluída com erros</p>
                 )}
               </div>
             </div>
@@ -108,7 +100,7 @@ export default function SyncModal({ isOpen, onClose, progress }: SyncModalProps)
                     <span className="text-green-800 font-medium">Sucessos</span>
                   </div>
                   <p className="text-2xl font-bold text-green-700 mt-1">
-                    {progress.sucessos.length}
+                    {progress.successCount}
                   </p>
                 </div>
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -117,44 +109,22 @@ export default function SyncModal({ isOpen, onClose, progress }: SyncModalProps)
                     <span className="text-red-800 font-medium">Erros</span>
                   </div>
                   <p className="text-2xl font-bold text-red-700 mt-1">
-                    {progress.erros.length}
+                    {progress.errorCount}
                   </p>
                 </div>
               </div>
 
-              {/* Success Details */}
-              {progress.sucessos.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-3 flex items-center">
-                    <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
-                    Imóveis Sincronizados com Sucesso
-                  </h3>
-                  <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {progress.sucessos.map((item, index) => (
-                      <div key={index} className="bg-green-50 border border-green-200 rounded p-3">
-                        <p className="font-medium text-green-800">{item.titulo}</p>
-                        <p className="text-sm text-green-600">
-                          ID: {item.id} • {item.fotosUpload} fotos • {item.videosUpload} vídeos
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               {/* Error Details */}
-              {progress.erros.length > 0 && (
+              {progress.errors.length > 0 && (
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 mb-3 flex items-center">
                     <AlertCircle className="w-5 h-5 text-red-600 mr-2" />
-                    Imóveis com Problemas
+                    Erros Encontrados
                   </h3>
                   <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {progress.erros.map((item, index) => (
+                    {progress.errors.map((error, index) => (
                       <div key={index} className="bg-red-50 border border-red-200 rounded p-3">
-                        <p className="font-medium text-red-800">{item.titulo}</p>
-                        <p className="text-sm text-red-600">ID: {item.id}</p>
-                        <p className="text-sm text-red-500 mt-1">{item.erro}</p>
+                        <p className="text-sm text-red-600">{error}</p>
                       </div>
                     ))}
                   </div>

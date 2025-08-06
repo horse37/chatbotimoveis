@@ -3,7 +3,7 @@ import { spawn } from 'child_process'
 import path from 'path'
 import { requireAuth } from '@/lib/auth'
 
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     // Verificar autenticação
     const auth = await requireAuth(request)
