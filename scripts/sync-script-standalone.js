@@ -723,7 +723,7 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
         const checkOptions = {
           hostname: url.hostname,
           port: url.port || 443,
-          path: `/api/imoveis?filters[id_integracao][$eq]=${encodeURIComponent(originalId || imovelData.id)}`,
+          path: `/imoveis?id_integracao=${encodeURIComponent(originalId || imovelData.id)}`,
           method: 'GET',
           headers: {
             'Content-Type': 'application/json'
@@ -744,8 +744,8 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
               const existingImoveis = checkResponse.data || checkResponse;
               const method = (existingImoveis && existingImoveis.length > 0) ? 'PUT' : 'POST';
               const path = (existingImoveis && existingImoveis.length > 0) 
-                ? `/api/imoveis/${existingImoveis[0].id}` 
-                 : '/api/imoveis';
+                ? `/imoveis/${existingImoveis[0].id}` 
+                 : '/imoveis';
               
               if (method === 'PUT') {
                 console.log(`   🔄 Atualizando imóvel existente (ID: ${existingImoveis[0].id})`);
@@ -794,9 +794,9 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
                 videos: uploadedVideos
               };
 
-              const payload = JSON.stringify({ data: imovelParaStrapi });
+              const payload = JSON.stringify(imovelParaStrapi);
               console.log(`📤 Enviando imóvel para Strapi:`);
-              console.log(JSON.stringify({ data: imovelParaStrapi }, null, 2));
+              console.log(JSON.stringify(imovelParaStrapi, null, 2));
               
               const options = {
                 hostname: url.hostname,
