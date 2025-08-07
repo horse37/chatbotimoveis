@@ -36,12 +36,8 @@ export async function POST(
 
     console.log('UUID válido recebido:', id)
 
-    // Verificar se o imóvel existe usando a API interna
-    const imovelResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:4000'}/api/admin/imoveis/${id}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    })
+    // Verificar se o imóvel existe usando a API pública
+    const imovelResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:4000'}/api/imoveis/${id}`)
 
     if (!imovelResponse.ok) {
       return NextResponse.json({ error: 'Imóvel não encontrado' }, { status: 404 })
