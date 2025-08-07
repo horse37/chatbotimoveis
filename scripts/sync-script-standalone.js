@@ -43,12 +43,18 @@ function getContentType(filename) {
 // Função para verificar se um arquivo já existe no Strapi pelo nome
 async function checkFileExistsInStrapi(filename) {
   try {
-    // Usar a API correta do Strapi v4 para buscar arquivos
-    const response = await axios.get(`${STRAPI_URL}/api/upload/files?filters[name][$eq]=${encodeURIComponent(filename)}`);
-    return response.data && response.data.data && response.data.data.length > 0 ? response.data.data[0].id : null;
+    // Usar a API correta do Strapi v3.8 para buscar arquivos
+    const response = await axios.get(`${STRAPI_URL}/upload/files?name=${encodeURIComponent(filename)}`);
+    return response.data && response.data.length > 0 ? response.data[0].id : null;
   } catch (error) {
     console.log(`   ⚠️ Erro ao verificar existência do arquivo ${filename}: ${error.message}`);
     // Retorna null para continuar com o upload mesmo se a verificação falhar
+    // Log adicional para debug específico
+    console.log(`   🔍 [EASYPANEL-LOG] Detalhes do erro para ${cleanFilename}:`);
+    console.log(`   🔍 [EASYPANEL-LOG] - URL original: ${filePathOrUrl}`);
+    console.log(`   🔍 [EASYPANEL-LOG] - Filename original: ${filename}`);
+    console.log(`   🔍 [EASYPANEL-LOG] - Filename limpo: ${cleanFilename}`);
+    
     return null;
   }
 }
@@ -124,12 +130,24 @@ async function getAllImoveisFromAPI() {
 }
 
 async function uploadFileToStrapi(filePathOrUrl, filename) {
+  // Validação inicial dos parâmetros
+  if (!filePathOrUrl || !filename) {
+    console.log(`   ❌ [EASYPANEL-LOG] Parâmetros inválidos - filePathOrUrl: ${filePathOrUrl}, filename: ${filename}`);
+    return null;
+  }
+  
+  // Limpar filename de caracteres problemáticos
+  const cleanFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+  if (cleanFilename !== filename) {
+    console.log(`   🧹 [EASYPANEL-LOG] Filename limpo: ${filename} -> ${cleanFilename}`);
+  }
+  
   try {
     // Primeiro, verificar se o arquivo já existe no Strapi
-    console.log(`   🔍 [EASYPANEL-LOG] Verificando se arquivo ${filename} já existe no Strapi...`);
-    const existingFileId = await checkFileExistsInStrapi(filename);
+    console.log(`   🔍 [EASYPANEL-LOG] Verificando se arquivo ${cleanFilename} já existe no Strapi...`);
+    const existingFileId = await checkFileExistsInStrapi(cleanFilename);
     if (existingFileId) {
-      console.log(`   ♻️ [EASYPANEL-LOG] Arquivo ${filename} já existe no Strapi (ID: ${existingFileId})`);
+      console.log(`   ♻️ [EASYPANEL-LOG] Arquivo ${cleanFilename} já existe no Strapi (ID: ${existingFileId})`);
       return existingFileId;
     }
 
@@ -175,10 +193,11 @@ async function uploadFileToStrapi(filePathOrUrl, filename) {
 
     // Preparar FormData
     const form = new FormData();
-    form.append('files', fileStream, filename);
+    form.append('files', fileStream, cleanFilename);
 
-    console.log(`   📤 [EASYPANEL-LOG] Enviando ${filename}...`);
+    console.log(`   📤 [EASYPANEL-LOG] Enviando ${cleanFilename}...`);
     console.log(`   🔗 [EASYPANEL-LOG] URL de upload: ${STRAPI_URL}/upload`);
+    console.log(`   📊 [EASYPANEL-LOG] Tamanho do arquivo: ${fileSize ? (fileSize / 1024 / 1024).toFixed(2) + ' MB' : 'desconhecido'}`);
 
     const response = await axios.post(`${STRAPI_URL}/upload`, form, {
       headers: {
@@ -210,7 +229,7 @@ async function uploadFileToStrapi(filePathOrUrl, filename) {
     // Processar resposta (igual ao upload-sem-token.js)
     if (response.data && response.data[0]) {
       const file = response.data[0];
-      console.log(`   ✅ [EASYPANEL-LOG] Upload realizado: ${filename} (ID: ${file.id})`);
+      console.log(`   ✅ [EASYPANEL-LOG] Upload realizado: ${cleanFilename} (ID: ${file.id})`);
       return file.id;
     } else {
       console.log(`   ❌ [EASYPANEL-LOG] Resposta inválida do servidor`);
@@ -219,7 +238,9 @@ async function uploadFileToStrapi(filePathOrUrl, filename) {
     }
 
   } catch (error) {
-    console.log(`   ❌ [EASYPANEL-LOG] Erro ao fazer upload de ${filename}:`);
+    console.log(`   ❌ [EASYPANEL-LOG] Erro ao fazer upload de ${cleanFilename}:`);
+    console.log(`   ❌ [EASYPANEL-LOG] Tipo do erro: ${error.constructor.name}`);
+    console.log(`   ❌ [EASYPANEL-LOG] Mensagem: ${error.message}`);
     console.log(`   ❌ [EASYPANEL-LOG] Stack trace upload: ${error.stack}`);
     
     if (error.response) {
@@ -246,8 +267,13 @@ async function uploadFileToStrapi(filePathOrUrl, filename) {
       console.log(`   🔍 [EASYPANEL-LOG] Domínio não encontrado`);
     } else if (error.code === 'ECONNREFUSED') {
       console.log(`   🔌 [EASYPANEL-LOG] Conexão recusada`);
+    } else if (error.code === 'ETIMEDOUT') {
+      console.log(`   ⏰ [EASYPANEL-LOG] Timeout na conexão`);
+    } else if (error.code === 'ECONNRESET') {
+      console.log(`   🔌 [EASYPANEL-LOG] Conexão resetada pelo servidor`);
     } else {
       console.log(`   ❗ [EASYPANEL-LOG] Erro: ${error.message}`);
+      console.log(`   ❗ [EASYPANEL-LOG] Código do erro: ${error.code}`);
     }
     
     return null;
@@ -258,26 +284,41 @@ async function uploadFileToStrapi(filePathOrUrl, filename) {
 function getFilePathFromUrl(url) {
   console.log(`   🔍 Processando URL: ${url}`);
   
+  // Validação inicial
+  if (!url || typeof url !== 'string' || url.trim() === '') {
+    console.log(`   ❌ URL inválida ou vazia`);
+    return null;
+  }
+  
+  // Limpar a URL removendo espaços e caracteres especiais
+  const cleanUrl = url.trim();
+  
   // Para URLs completas, retorna como está
-  if (url.startsWith('https://coopcorretores.com.br/')) {
+  if (cleanUrl.startsWith('https://coopcorretores.com.br/') || cleanUrl.startsWith('http://coopcorretores.com.br/')) {
     console.log(`   🌐 URL completa detectada`);
-    return url;
+    return cleanUrl;
+  }
+  
+  // Para outras URLs completas (http/https)
+  if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
+    console.log(`   🌐 URL externa detectada`);
+    return cleanUrl;
   }
   
   // Para caminhos que começam com /, retorna como está (será processado no upload)
-  if (url.startsWith('/')) {
+  if (cleanUrl.startsWith('/')) {
     console.log(`   📂 Caminho relativo detectado`);
-    return url;
+    return cleanUrl;
   }
   
   // Para nomes de arquivo simples, constrói o caminho completo
-  if (!url.startsWith('http')) {
-    const fullPath = `/uploads/imoveis/${url}`;
+  if (!cleanUrl.includes('://')) {
+    const fullPath = `/uploads/imoveis/${cleanUrl}`;
     console.log(`   📁 Construindo caminho: ${fullPath}`);
     return fullPath;
   }
   
-  console.log(`   ⚠️  URL não reconhecida: ${url}`);
+  console.log(`   ⚠️ URL não reconhecida: ${cleanUrl}`);
   return null;
 }
 
@@ -555,16 +596,35 @@ async function syncSingleImovelCorrigido(imovelData) {
         console.log(`   📸 Processando ${fotos.length} fotos...`);
         for (let i = 0; i < fotos.length; i++) {
           const fotoUrl = fotos[i];
+          console.log(`   🔍 DEBUG - Foto ${i+1} URL original: ${fotoUrl}`);
+          
+          // Validação adicional da URL
+          if (!fotoUrl || fotoUrl.trim() === '') {
+            console.log(`   ⚠️ Foto ${i+1} tem URL vazia - pulando`);
+            continue;
+          }
+          
           const localPath = getFilePathFromUrl(fotoUrl);
+          console.log(`   🔍 DEBUG - Foto ${i+1} caminho processado: ${localPath}`);
           
           if (localPath) {
-            console.log(`   📤 Fazendo upload da foto ${i+1}: ${path.basename(localPath)}`);
-            const fileId = await uploadFileToStrapi(localPath, path.basename(localPath));
-            if (fileId) {
-              uploadedFotos.push(fileId);
+            const filename = path.basename(localPath.split('?')[0]); // Remove query params
+            console.log(`   📤 Fazendo upload da foto ${i+1}: ${filename}`);
+            try {
+              const fileId = await uploadFileToStrapi(localPath, filename);
+              if (fileId) {
+                uploadedFotos.push(fileId);
+                console.log(`   ✅ Foto ${i+1} enviada com sucesso (ID: ${fileId})`);
+              } else {
+                console.log(`   ⚠️ Falha no upload da foto ${i+1} - continuando com próxima foto`);
+              }
+            } catch (error) {
+              console.log(`   ⚠️ Erro no upload da foto ${i+1}: ${error.message}`);
+              console.log(`   📋 Continuando processamento das demais fotos...`);
+              // Continua o loop mesmo com erro na foto
             }
           } else {
-            console.log(`   ⚠️  Caminho local não encontrado para: ${fotoUrl}`);
+            console.log(`   ⚠️ Caminho local não encontrado para: ${fotoUrl}`);
           }
         }
       }
