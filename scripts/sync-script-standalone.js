@@ -43,10 +43,12 @@ function getContentType(filename) {
 // Função para verificar se um arquivo já existe no Strapi pelo nome
 async function checkFileExistsInStrapi(filename) {
   try {
-    const response = await axios.get(`${STRAPI_URL}/upload/files?filters[name][$eq]=${encodeURIComponent(filename)}`);
-    return response.data && response.data.length > 0 ? response.data[0].id : null;
+    // Usar a API correta do Strapi v4 para buscar arquivos
+    const response = await axios.get(`${STRAPI_URL}/api/upload/files?filters[name][$eq]=${encodeURIComponent(filename)}`);
+    return response.data && response.data.data && response.data.data.length > 0 ? response.data.data[0].id : null;
   } catch (error) {
     console.log(`   ⚠️ Erro ao verificar existência do arquivo ${filename}: ${error.message}`);
+    // Retorna null para continuar com o upload mesmo se a verificação falhar
     return null;
   }
 }
@@ -671,11 +673,12 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
                 uploadedFotos.push(fileId);
                 console.log(`   ✅ [EASYPANEL-LOG] Foto ${i+1} enviada com sucesso (ID: ${fileId})`);
               } else {
-                console.log(`   ❌ [EASYPANEL-LOG] Falha no upload da foto ${i+1}`);
+                console.log(`   ⚠️ [EASYPANEL-LOG] Falha no upload da foto ${i+1} - continuando com próxima foto`);
               }
             } catch (error) {
-              console.log(`   ❌ [EASYPANEL-LOG] Erro no upload da foto ${i+1}: ${error.message}`);
-              console.log(`   ❌ [EASYPANEL-LOG] Stack trace foto: ${error.stack}`);
+              console.log(`   ⚠️ [EASYPANEL-LOG] Erro no upload da foto ${i+1}: ${error.message}`);
+              console.log(`   📋 [EASYPANEL-LOG] Continuando processamento das demais fotos...`);
+              // Continua o loop mesmo com erro na foto
             }
           } else {
             console.log(`   ⚠️ [EASYPANEL-LOG] Caminho local não encontrado para: ${foto}`);
@@ -700,11 +703,12 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
                 uploadedVideos.push(fileId);
                 console.log(`   ✅ [EASYPANEL-LOG] Vídeo ${i+1} enviado com sucesso (ID: ${fileId})`);
               } else {
-                console.log(`   ❌ [EASYPANEL-LOG] Falha no upload do vídeo ${i+1}`);
+                console.log(`   ⚠️ [EASYPANEL-LOG] Falha no upload do vídeo ${i+1} - continuando com próximo vídeo`);
               }
             } catch (error) {
-              console.log(`   ❌ [EASYPANEL-LOG] Erro no upload do vídeo ${i+1}: ${error.message}`);
-              console.log(`   ❌ [EASYPANEL-LOG] Stack trace vídeo: ${error.stack}`);
+              console.log(`   ⚠️ [EASYPANEL-LOG] Erro no upload do vídeo ${i+1}: ${error.message}`);
+              console.log(`   📋 [EASYPANEL-LOG] Continuando processamento dos demais vídeos...`);
+              // Continua o loop mesmo com erro no vídeo
             }
           } else {
             console.log(`   ⚠️ [EASYPANEL-LOG] Caminho local não encontrado para: ${video}`);
