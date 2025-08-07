@@ -42,9 +42,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       
       // Analisar o resultado
       const lines = output.split('\n')
-      const successLine = lines.find(line => line.includes('[EASYPANEL-LOG] Processados com sucesso:'))
-      const totalLine = lines.find(line => line.includes('[EASYPANEL-LOG] Total processado:'))
-      const errorLine = lines.find(line => line.includes('[EASYPANEL-LOG] Erros encontrados:'))
+      const successLine = lines.find((line: string) => line.includes('[EASYPANEL-LOG] Processados com sucesso:'))
+      const totalLine = lines.find((line: string) => line.includes('[EASYPANEL-LOG] Total processado:'))
+      const errorLine = lines.find((line: string) => line.includes('[EASYPANEL-LOG] Erros encontrados:'))
       
       if (successLine) {
         const match = successLine.match(/Processados com sucesso: (\d+)/)
