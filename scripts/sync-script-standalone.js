@@ -723,7 +723,7 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
         const checkOptions = {
           hostname: url.hostname,
           port: url.port || 443,
-          path: `/imoveis?id_integracao=${encodeURIComponent(originalId || imovelData.id)}`,
+          path: `/api/imoveis?filters[id_integracao][$eq]=${encodeURIComponent(originalId || imovelData.id)}`,
           method: 'GET',
           headers: {
             'Content-Type': 'application/json'
@@ -744,8 +744,8 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
               const existingImoveis = checkResponse.data || checkResponse;
               const method = (existingImoveis && existingImoveis.length > 0) ? 'PUT' : 'POST';
               const path = (existingImoveis && existingImoveis.length > 0) 
-                ? `/imoveis/${existingImoveis[0].id}` 
-                 : '/imoveis';
+                ? `/api/imoveis/${existingImoveis[0].id}` 
+                 : '/api/imoveis';
               
               if (method === 'PUT') {
                 console.log(`   🔄 Atualizando imóvel existente (ID: ${existingImoveis[0].id})`);
@@ -794,9 +794,9 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
                 videos: uploadedVideos
               };
 
-              const payload = JSON.stringify(imovelParaStrapi);
+              const payload = JSON.stringify({ data: imovelParaStrapi });
               console.log(`📤 Enviando imóvel para Strapi:`);
-              console.log(JSON.stringify(imovelParaStrapi, null, 2));
+              console.log(JSON.stringify({ data: imovelParaStrapi }, null, 2));
               
               const options = {
                 hostname: url.hostname,
@@ -811,22 +811,30 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
               
 
 
+              console.log(`🔗 [EASYPANEL-LOG] Enviando para: ${url.protocol}//${url.hostname}${url.port ? ':' + url.port : ''}${path}`);
+              console.log(`📊 [EASYPANEL-LOG] Método: ${method}`);
+              
               const req = https.request(options, (res) => {
                 let responseData = '';
                 res.on('data', chunk => responseData += chunk);
                 res.on('end', () => {
+                  console.log(`📊 [EASYPANEL-LOG] Status da resposta do imóvel: ${res.statusCode}`);
+                  console.log(`📊 [EASYPANEL-LOG] Headers da resposta:`, JSON.stringify(res.headers, null, 2));
+                  console.log(`📊 [EASYPANEL-LOG] Resposta completa:`, responseData);
+                  
                   try {
                     const parsed = JSON.parse(responseData);
                     if (res.statusCode === 200 || res.statusCode === 201) {
-                      console.log(`   ✅ Imóvel enviado com sucesso! ID: ${parsed.id || parsed.data?.id}`);
+                      console.log(`   ✅ [EASYPANEL-LOG] Imóvel enviado com sucesso! ID: ${parsed.id || parsed.data?.id}`);
                       resolve(true);
                     } else {
-                      console.log(`   ❌ Erro ao enviar imóvel: Status ${res.statusCode}`);
-                      console.log(`   ❌ Detalhes do erro:`, JSON.stringify(parsed, null, 2));
+                      console.log(`   ❌ [EASYPANEL-LOG] Erro ao enviar imóvel: Status ${res.statusCode}`);
+                      console.log(`   ❌ [EASYPANEL-LOG] Detalhes do erro:`, JSON.stringify(parsed, null, 2));
                       resolve(false);
                     }
                   } catch (e) {
-                      console.log(`   ❌ Erro ao parsear resposta: ${e.message}`);
+                      console.log(`   ❌ [EASYPANEL-LOG] Erro ao parsear resposta: ${e.message}`);
+                      console.log(`   ❌ [EASYPANEL-LOG] Resposta bruta: ${responseData}`);
                       resolve(false);
                     }
                 });
