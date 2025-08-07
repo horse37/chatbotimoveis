@@ -122,6 +122,7 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=4000
 ENV HOSTNAME="0.0.0.0"
+ENV NEXTAUTH_URL="http://127.0.0.1:4000"
 
 # Criar usuário não-root para produção
 RUN addgroup --system --gid 1001 nodejs
