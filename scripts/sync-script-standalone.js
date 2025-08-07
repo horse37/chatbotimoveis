@@ -61,8 +61,8 @@ async function checkFileExistsInStrapi(filename) {
 
 async function getAllImoveisFromAPI() {
   try {
-    // Usar URL interna quando executado via API, externa quando executado diretamente
-    const API_URL = process.env.ADMIN_TOKEN ? 'http://localhost:4000' : (process.env.NEXTAUTH_URL || 'http://localhost:4000');
+    // Usar URL correta baseada no ambiente
+    const API_URL = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:4000';
     console.log(`🔍 [EASYPANEL-LOG] Buscando todos os imóveis na API: ${API_URL}/api/imoveis?limit=50`);
     
     // Aguardar um pouco para garantir que o servidor esteja pronto
@@ -933,8 +933,8 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
 // Função para buscar imóvel específico via API
 async function getImovelFromAPI(imovelId) {
   try {
-    // Usar URL interna quando executado via API, externa quando executado diretamente
-    const API_URL = process.env.ADMIN_TOKEN ? 'http://localhost:4000' : (process.env.NEXTAUTH_URL || 'http://localhost:4000');
+    // Usar URL correta baseada no ambiente
+    const API_URL = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:4000';
     console.log(`🔍 Buscando imóvel ID ${imovelId} na API pública: ${API_URL}/api/imoveis/${imovelId}`);
     const response = await axios.get(`${API_URL}/api/imoveis/${imovelId}`, {
       timeout: 60000, // Aumentado para 60 segundos
