@@ -48,7 +48,7 @@ export async function POST(
     }
 
     // Executar o script de sincronização para o imóvel específico
-    const scriptPath = path.join(process.cwd(), 'sync-script-standalone.js')
+    const scriptPath = path.join(process.cwd(), 'scripts', 'sync-script-standalone.js')
     const command = `node "${scriptPath}" --imovel-id=${id}`
 
     console.log(`Executando sincronização individual para imóvel ${id}:`, command)
