@@ -160,8 +160,8 @@ COPY --from=builder /app/next.config.js ./
 COPY --from=builder /app/tsconfig.json ./
 COPY --from=builder /app/jsconfig.json ./
 COPY --from=deps /app/init-permissions.js ./
-COPY --from=builder /app/sync-script.js ./
-COPY --from=builder /app/sync-script-standalone.js ./
+RUN mkdir -p ./scripts
+COPY --from=builder /app/scripts/sync-script-standalone.js ./scripts/
 COPY --from=deps /app/node_modules ./node_modules
 
 # Copiar jsconfig.json para node_modules/@ para garantir resolução de caminhos
