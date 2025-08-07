@@ -122,8 +122,7 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=4000
 ENV HOSTNAME="0.0.0.0"
-ENV NEXTAUTH_URL="http://127.0.0.1:4000"
-ENV NODE_OPTIONS="--dns-result-order=ipv4first"
+# Removido NEXTAUTH_URL e NODE_OPTIONS que estavam causando lentidão no deploy
 
 # Criar usuário não-root para produção
 RUN addgroup --system --gid 1001 nodejs
