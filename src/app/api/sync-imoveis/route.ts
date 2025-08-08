@@ -23,12 +23,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       const scriptPath = require('path').join(projectRoot, 'scripts', 'sync-script-standalone.js')
       
       // Executar o script e capturar a saída
+      const baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:4000'
       const output = execSync(`node "${scriptPath}"`, {
         cwd: projectRoot,
         encoding: 'utf8',
         env: {
           ...process.env,
-          NODE_ENV: process.env.NODE_ENV || 'production'
+          NODE_ENV: process.env.NODE_ENV || 'production',
+          API_BASE_URL: baseUrl
         }
       })
       
