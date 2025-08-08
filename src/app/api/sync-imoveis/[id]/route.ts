@@ -46,7 +46,6 @@ export async function POST(
 
     // Executar o script de sincronização para o imóvel específico
     const scriptPath = path.join(process.cwd(), 'scripts', 'sync-script-standalone.js')
-    const baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:4000'
     const command = `node "${scriptPath}" --imovel-id=${id}`
 
     console.log(`Executando sincronização individual para imóvel ${id}:`, command)
