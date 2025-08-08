@@ -403,7 +403,28 @@ async function syncSingleImovel(imovel) {
         description: imovel.descricao,
         price: imovel.preco,
         tipo_contrato: imovel.tipo_contrato || 'venda',
-        tipo_imovel: imovel.tipo_imovel || 'casa',
+        tipo_imovel: (() => {
+          const tipoMap = {
+            'apartamento': 'apartamento',
+            'casa': 'casa',
+            'terreno': 'terreno',
+            'galpao': 'galpao',
+            'casa_condominio': 'casa_condominio',
+            'casa_condomínio': 'casa_condominio',
+            'rural': 'terreno',
+            'comercial': 'galpao',
+            'industrial': 'galpao',
+            'lote': 'terreno',
+            'sobrado': 'casa',
+            'flat': 'apartamento',
+            'kitnet': 'apartamento',
+            'loja': 'galpao',
+            'salao': 'galpao',
+            'salão': 'galpao'
+          };
+          const tipoOriginal = String(imovel.tipo || imovel.tipo_imovel || '').toLowerCase().trim();
+          return tipoMap[tipoOriginal] || 'casa';
+        })(),
         active: true,
         bairro: imovel.bairro,
         cidade: imovel.cidade,
@@ -820,7 +841,28 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
                 description: imovelData.descricao || 'Sem descrição',
                 price: parseFloat(imovelData.preco) || 0,
                 tipo_contrato: imovelData.finalidade || imovelData.tipo_contrato || 'venda',
-                tipo_imovel: imovelData.tipo || 'casa',
+                tipo_imovel: (() => {
+          const tipoMap = {
+            'apartamento': 'apartamento',
+            'casa': 'casa',
+            'terreno': 'terreno',
+            'galpao': 'galpao',
+            'casa_condominio': 'casa_condominio',
+            'casa_condomínio': 'casa_condominio',
+            'rural': 'terreno',
+            'comercial': 'galpao',
+            'industrial': 'galpao',
+            'lote': 'terreno',
+            'sobrado': 'casa',
+            'flat': 'apartamento',
+            'kitnet': 'apartamento',
+            'loja': 'galpao',
+            'salao': 'galpao',
+            'salão': 'galpao'
+          };
+          const tipoOriginal = String(imovelData.tipo || '').toLowerCase().trim();
+          return tipoMap[tipoOriginal] || 'casa';
+        })(),
                 active: imovelData.status === 'disponivel',
                 bairro: imovelData.bairro || '',
                 cidade: imovelData.cidade || '',
