@@ -62,14 +62,14 @@ async function checkFileExistsInStrapi(filename) {
 async function getAllImoveisFromAPI() {
   try {
     // Usar URL correta baseada no ambiente
-    const API_URL = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || process.env.API_BASE_URL || 'http://localhost:4000';
-    console.log(`🔍 [EASYPANEL-LOG] Buscando todos os imóveis na API: ${API_URL}/api/imoveis?limit=50`);
+    const API_URL = process.env.STRAPI_URL || 'https://whatsapp-strapi.xjueib.easypanel.host';
+    console.log(`🔍 [EASYPANEL-LOG] Buscando todos os imóveis na API: ${API_URL}/imoveis?limit=50`);
     
     // Aguardar um pouco para garantir que o servidor esteja pronto
     await new Promise(resolve => setTimeout(resolve, 2000));
     
     // Tentar primeiro a API simples de admin
-    const response = await axios.get(`${API_URL}/api/imoveis?limit=50`, {
+    const response = await axios.get(`${API_URL}/imoveis?limit=50`, {
       timeout: 60000, // Aumentado para 60 segundos
       headers: {
         'Accept': 'application/json',
@@ -934,9 +934,9 @@ async function enviarImovelParaStrapiCorrigido(imovelData, originalId) {
 async function getImovelFromAPI(imovelId) {
   try {
     // Usar URL correta baseada no ambiente
-    const API_URL = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || process.env.API_BASE_URL || 'http://localhost:4000';
-    console.log(`🔍 Buscando imóvel ID ${imovelId} na API pública: ${API_URL}/api/imoveis/${imovelId}`);
-    const response = await axios.get(`${API_URL}/api/imoveis/${imovelId}`, {
+    const API_URL = process.env.STRAPI_URL || 'https://whatsapp-strapi.xjueib.easypanel.host';
+    console.log(`🔍 Buscando imóvel ID ${imovelId} na API pública: ${API_URL}/imoveis/${imovelId}`);
+    const response = await axios.get(`${API_URL}/imoveis/${imovelId}`, {
       timeout: 60000, // Aumentado para 60 segundos
       headers: {
         'Accept': 'application/json',
