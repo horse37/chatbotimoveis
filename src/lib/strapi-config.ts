@@ -4,7 +4,7 @@ import type { StrapiClient } from '@strapi/client';
 
 // Configuração padrão do Strapi
 export const strapiConfig = {
-  baseURL: process.env.NEXT_PUBLIC_STRAPI_URL || 'http://localhost:1337/api',
+  baseURL: process.env.NEXT_PUBLIC_STRAPI_URL || 'http://localhost:1337',
   apiToken: process.env.NEXT_PUBLIC_STRAPI_API_TOKEN || process.env.STRAPI_API_TOKEN,
   serverToken: process.env.STRAPI_SERVER_API_TOKEN,
   timeout: 10000,

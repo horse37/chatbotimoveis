@@ -52,7 +52,7 @@ class StrapiSyncService {
           
           formData.append('files', new Blob([fileBuffer]), fileName);
           
-          const response = await fetch(`${this.strapiUrl}/api/upload`, {
+          const response = await fetch(`${this.strapiUrl}/upload`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${this.apiToken}`,
@@ -119,7 +119,7 @@ class StrapiSyncService {
       // Prepara os dados para o Strapi
       const strapiImovel = this.mapLocalToStrapi(imovel, uploadedImages);
       
-      const response = await fetch(`${this.strapiUrl}/api/imoveis`, {
+      const response = await fetch(`${this.strapiUrl}/imoveis`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -147,7 +147,7 @@ class StrapiSyncService {
       // Prepara os dados para o Strapi
       const strapiImovel = this.mapLocalToStrapi(imovel, uploadedImages);
       
-      const response = await fetch(`${this.strapiUrl}/api/imoveis/${strapiId}`, {
+      const response = await fetch(`${this.strapiUrl}/imoveis/${strapiId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -169,7 +169,7 @@ class StrapiSyncService {
 
   async deleteImovel(strapiId: number): Promise<any> {
     try {
-      const response = await fetch(`${this.strapiUrl}/api/imoveis/${strapiId}`, {
+      const response = await fetch(`${this.strapiUrl}/imoveis/${strapiId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${this.apiToken}`,
@@ -189,7 +189,7 @@ class StrapiSyncService {
 
   async findImovelByLocalId(localId: number): Promise<any> {
     try {
-      const response = await fetch(`${this.strapiUrl}/api/imoveis?filters[local_id][$eq]=${localId}`, {
+      const response = await fetch(`${this.strapiUrl}/imoveis?local_id=${localId}`, {
         headers: {
           'Authorization': `Bearer ${this.apiToken}`,
         }

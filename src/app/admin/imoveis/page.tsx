@@ -160,75 +160,106 @@ export default function AdminImoveisPage() {
         return
       }
 
-      // Primeiro, buscar todos os imóveis para saber o total
-      const imoveisResponse = await fetch('/api/imoveis', {
+      // Buscar todos os imóveis para sincronizar (sem limite)
+      const response = await fetch('/api/imoveis?limit=1000', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       })
       
-      if (!imoveisResponse.ok) {
+      if (!response.ok) {
         throw new Error('Erro ao buscar lista de imóveis')
       }
       
-      const imoveisData = await imoveisResponse.json()
-      const totalImoveis = imoveisData.imoveis?.length || 0
+      const imoveisData = await response.json()
+      console.log('📊 Dados recebidos da API:', imoveisData)
+      const imoveis = imoveisData?.data?.imoveis || []
+      const totalImoveis = imoveis.length
+      console.log(`📋 Total de imóveis encontrados: ${totalImoveis}`)
       
+      if (totalImoveis === 0) {
+        toast('Nenhum imóvel para sincronizar')
+        setIsSyncing(false)
+        setShowFullSyncModal(false)
+        return
+      }
+
       setFullSyncProgress(prev => ({ ...prev, total: totalImoveis, currentImovel: 'Preparando sincronização...' }))
       
-      // Simular progresso durante a sincronização
-      const progressInterval = setInterval(() => {
-        setFullSyncProgress(prev => {
-          if (prev.current < prev.total) {
-            const newCurrent = Math.min(prev.current + 1, prev.total)
-            const currentImovel = imoveisData.imoveis?.[newCurrent - 1]?.titulo || `Imóvel ${newCurrent}`
-            return {
-              ...prev,
-              current: newCurrent,
-              currentImovel: `Processando: ${currentImovel}`
-            }
+      let successCount = 0
+      let errorCount = 0
+      const errors: string[] = []
+
+      // Sincronizar cada imóvel individualmente usando o endpoint individual
+      for (let i = 0; i < imoveis.length; i++) {
+        const imovel = imoveis[i]
+        
+        setFullSyncProgress(prev => ({
+          ...prev,
+          current: i + 1,
+          currentImovel: imovel.titulo || `Imóvel ${i + 1}`
+        }))
+
+        try {
+          console.log(`🔄 Iniciando sincronização do imóvel ${imovel.id} - Título: ${imovel.titulo}`)
+          const response = await fetch(`/api/sync-imoveis/${imovel.id}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+          })
+
+          console.log(`📊 Resposta da API para imóvel ${imovel.id}:`, response.status, response.statusText)
+          
+          if (response.ok) {
+            const result = await response.json()
+            console.log(`✅ Sucesso na sincronização do imóvel ${imovel.id} - ${imovel.titulo}:`, result)
+            successCount++
+          } else {
+            const errorData = await response.text()
+            console.error(`❌ ERRO na sincronização do imóvel ${imovel.id} - ${imovel.titulo}:`, {
+              status: response.status,
+              statusText: response.statusText,
+              error: errorData
+            })
+            toast.error(`Erro no imóvel ${imovel.id} - ${imovel.titulo}: ${response.statusText}`)
+            errorCount++
+            errors.push(`Imóvel ${imovel.id} (${imovel.titulo}): ${response.statusText} - ${errorData}`)
           }
-          return prev
-        })
-      }, 2000) // Atualizar a cada 2 segundos
-      
-      const response = await fetch('/api/sync-imoveis', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-      })
-      
-      clearInterval(progressInterval)
-      
-      const result = await response.json()
-      
-      if (response.ok) {
-        setFullSyncProgress(prev => ({
-          ...prev,
-          current: totalImoveis,
-          currentImovel: 'Concluído!',
-          successCount: result.successCount || 0,
-          errorCount: result.errorCount || 0,
-          errors: result.errors || []
-        }))
-        
-        toast.success(`Sincronização concluída: ${result.successCount} imóveis atualizados`)
-        
-        // Recarregar a lista de imóveis após sincronização
-        setTimeout(() => {
-          fetchImoveis()
-        }, 2000)
-      } else {
-        setFullSyncProgress(prev => ({
-          ...prev,
-          currentImovel: 'Erro na sincronização',
-          errorCount: 1,
-          errors: [result.error || 'Erro desconhecido']
-        }))
-        toast.error(`Erro na sincronização: ${result.error || 'Erro desconhecido'}`)
+        } catch (error) {
+          console.error(`🔌 ERRO DE CONEXÃO para imóvel ${imovel.id} - ${imovel.titulo}:`, error)
+          toast.error(`Erro de conexão no imóvel ${imovel.id} - ${imovel.titulo}: ${error.message}`)
+          errorCount++
+          errors.push(`Imóvel ${imovel.id} (${imovel.titulo}): Erro de conexão - ${error.message}`)
+        }
+
+        // Pequena pausa para não sobrecarregar o servidor
+        await new Promise(resolve => setTimeout(resolve, 200))
       }
+
+      // Atualizar progresso final
+      setFullSyncProgress(prev => ({
+        ...prev,
+        current: totalImoveis,
+        currentImovel: 'Concluído!',
+        successCount,
+        errorCount,
+        errors
+      }))
+
+      if (errorCount === 0) {
+        toast.success(`Sincronização concluída: ${successCount} imóveis sincronizados`)
+      } else {
+        toast.error(`Sincronização concluída: ${successCount} sucessos, ${errorCount} erros`)
+      }
+      
+      // Recarregar a lista de imóveis após sincronização
+      setTimeout(() => {
+        fetchImoveis()
+        setShowFullSyncModal(false)
+      }, 2000)
+      
     } catch (error) {
       console.error('Erro ao conectar com o servidor:', error)
       setFullSyncProgress(prev => ({
