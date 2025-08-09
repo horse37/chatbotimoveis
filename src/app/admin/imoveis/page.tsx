@@ -11,6 +11,28 @@ import { fetchAuthApi } from '@/lib/api'
 import { formatImovelId } from '@/lib/utils'
 import { useAuth } from '@/lib/hooks/useAuth'
 
+// Função para sincronização automática em segundo plano
+const syncImovelBackground = async (imovelId: string, token: string) => {
+  try {
+    console.log(`🔄 Sincronização automática iniciada para imóvel ${imovelId}`);
+    const response = await fetch(`/api/sync-imoveis/${imovelId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (response.ok) {
+      console.log(`✅ Sincronização automática concluída para imóvel ${imovelId}`);
+    } else {
+      console.error(`❌ Erro na sincronização automática do imóvel ${imovelId}:`, response.statusText);
+    }
+  } catch (error) {
+    console.error(`🔌 Erro de conexão na sincronização automática do imóvel ${imovelId}:`, error);
+  }
+};
+
 interface Imovel {
   id: number
   codigo?: number

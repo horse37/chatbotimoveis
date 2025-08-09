@@ -8,6 +8,27 @@ import toast from 'react-hot-toast';
 import { fetchAuthApi } from '@/lib/api';
 import { formatImovelId } from '@/lib/utils';
 
+// Função para sincronização automática em segundo plano
+const syncImovelBackground = async (imovelId: string, token: string) => {
+  try {
+    console.log(`🔄 Sincronização automática iniciada para imóvel ${imovelId}`);
+    const response = await fetch(`/api/sync-imoveis/${imovelId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (response.ok) {
+      console.log(`✅ Sincronização automática concluída para imóvel ${imovelId}`);
+    } else {
+      console.error(`❌ Erro na sincronização automática do imóvel ${imovelId}:`, response.statusText);
+    }
+  } catch (error) {
+    console.error(`🔌 Erro de conexão na sincronização automática do imóvel ${imovelId}:`, error);
+  }
+};
 
 interface Corretor {
   id: number;
@@ -403,6 +424,12 @@ export default function EditarImovel() {
       }
 
       toast.success('Imóvel atualizado com sucesso!');
+      
+      // Sincronização automática em segundo plano
+      if (id && token) {
+        syncImovelBackground(id as string, token);
+      }
+      
       router.push('/admin/imoveis');
     } catch (error: any) {
       console.error('Erro ao atualizar imóvel:', error);

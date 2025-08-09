@@ -42,6 +42,28 @@ interface Corretor {
   email: string
 }
 
+// Função para sincronização automática em segundo plano
+const syncImovelBackground = async (imovelId: string, token: string) => {
+  try {
+    console.log(`🔄 Sincronização automática iniciada para imóvel ${imovelId}`);
+    const response = await fetch(`/api/sync-imoveis/${imovelId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (response.ok) {
+      console.log(`✅ Sincronização automática concluída para imóvel ${imovelId}`);
+    } else {
+      console.error(`❌ Erro na sincronização automática do imóvel ${imovelId}:`, response.statusText);
+    }
+  } catch (error) {
+    console.error(`🔌 Erro de conexão na sincronização automática do imóvel ${imovelId}:`, error);
+  }
+};
+
 export default function CadastrarImovelPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -339,7 +361,16 @@ useEffect(() => {
         throw new Error(errorData.error || 'Erro ao cadastrar imóvel');
       }
 
+      const result = await response.json();
+      const imovelId = result.id;
+
       toast.success('Imóvel cadastrado com sucesso!');
+      
+      // Sincronização automática em segundo plano
+      if (imovelId) {
+        syncImovelBackground(imovelId, token);
+      }
+      
       router.push('/admin/imoveis');
     } catch (error: any) {
       console.error('Erro ao cadastrar imóvel:', error);
