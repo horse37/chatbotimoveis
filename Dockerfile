@@ -91,8 +91,9 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV DATABASE_URL=postgresql://postgres:postgres@localhost:5432/imobiliaria_temp
 
 # Build com ambiente de produção (padrão do Next.js)
-# Adicionando --no-lint para evitar problemas durante o build
-RUN npm run build -- --no-lint
+# Desabilitando ESLint durante o build para evitar problemas
+ENV NEXT_LINT=false
+RUN npm run build
 
 # Garantir que os componentes estejam disponíveis nos diretórios .next/server e .next/standalone
 RUN mkdir -p ./.next/server/app/components ./.next/server/src/components ./.next/standalone/src/components ./.next/standalone/src/lib ./.next/standalone/src/app ./.next/server/src/types ./.next/standalone/src/types

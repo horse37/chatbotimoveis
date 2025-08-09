@@ -13,7 +13,6 @@ const pool = new Pool({
   min: 2,
   idleTimeoutMillis: 600000, // 10 minutos
   connectionTimeoutMillis: 30000, // 30 segundos
-  acquireTimeoutMillis: 30000, // 30 segundos para adquirir conexão
   statement_timeout: 30000, // 30 segundos para queries
 })
 

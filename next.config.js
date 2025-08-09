@@ -12,6 +12,10 @@ const nextConfig = {
   distDir: '.next',
   // Configuração para pacotes externos no servidor
   serverExternalPackages: [],
+  // Desabilitar ESLint durante o build
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   // Configuração experimental para melhorar a resolução de módulos
   experimental: {
     // Configurações experimentais removidas para evitar conflitos

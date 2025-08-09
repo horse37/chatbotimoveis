@@ -228,10 +228,11 @@ export default function AdminImoveisPage() {
             errors.push(`Imóvel ${imovel.id} (${imovel.titulo}): ${response.statusText} - ${errorData}`)
           }
         } catch (error) {
-          console.error(`🔌 ERRO DE CONEXÃO para imóvel ${imovel.id} - ${imovel.titulo}:`, error)
-          toast.error(`Erro de conexão no imóvel ${imovel.id} - ${imovel.titulo}: ${error.message}`)
+          console.error(`🔌 ERRO DE CONEXÃO para imóvel ${imovel.id} - ${imovel.titulo}:`, error)       
+          const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
+          toast.error(`Erro de conexão no imóvel ${imovel.id} - ${imovel.titulo}: ${errorMessage}`)    
           errorCount++
-          errors.push(`Imóvel ${imovel.id} (${imovel.titulo}): Erro de conexão - ${error.message}`)
+          errors.push(`Imóvel ${imovel.id} (${imovel.titulo}): Erro de conexão - ${errorMessage}`)
         }
 
         // Pequena pausa para não sobrecarregar o servidor
